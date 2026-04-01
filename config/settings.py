@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 from datetime import timedelta
 
@@ -143,3 +144,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
+
+NEIS_API_KEY = os.getenv('NEIS_API_KEY')
+NEIS_ATPT_CODE = os.getenv('NEIS_ATPT_CODE')
+NEIS_SCHOOL_CODE = os.getenv('NEIS_SCHOOL_CODE')
