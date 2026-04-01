@@ -1,8 +1,10 @@
 from django.urls import path
-from .views import WorkoutHistoryView, TodayWorkoutView, WorkoutSetUpdateView
+
+from .views import TodayWorkoutSetCreateView, TodayWorkoutView, WorkoutHistoryView
+
 
 urlpatterns = [
     path('history/', WorkoutHistoryView.as_view(), name='workout_history'),
     path('today/', TodayWorkoutView.as_view(), name='workout_today'),
-    path('sets/<int:set_id>/', WorkoutSetUpdateView.as_view(), name='workout_set_update'),
+    path('today/sets', TodayWorkoutSetCreateView.as_view(), name='workout_set_update'),
 ]
