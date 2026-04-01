@@ -1,6 +1,8 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -162,3 +164,29 @@ class MealApiTests(APITestCase):
         self.assertEqual(response.data['date'], '2026-03-31')
         self.assertEqual(response.data['total_calories'], 700)
         self.assertEqual(len(response.data['meals']), 1)
+
+    @override_settings(
+        NEIS_API_KEY='test-key',
+        NEIS_ATPT_CODE='G10',
+        NEIS_SCHOOL_CODE='7430310',
+    )
+    @patch('diet.views.fetch_school_lunch')
+    def test_get_school_lunch(self, mock_fetch_school_lunch):
+        mock_fetch_school_lunch.return_value = {
+            'date': timezone.localdate(),
+            'menus': [
+                {'name': '닭갈비 볶음', 'protein_grams': None},
+                {'name': '계란국', 'protein_grams': None},
+            ],
+            'total_protein': 12.3,
+            'calories': '850.5 Kcal',
+            'nutrition_info': '탄수화물(g) 120.0<br/>단백질(g) 12.3<br/>지방(g) 20.1',
+        }
+
+        response = self.client.get(reverse('school_lunch'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['school']['education_office_code'], 'G10')
+        self.assertEqual(response.data['school']['school_code'], '7430310')
+        self.assertEqual(len(response.data['menus']), 2)
+        self.assertEqual(response.data['total_protein'], 12.3)
