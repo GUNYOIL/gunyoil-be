@@ -1,3 +1,4 @@
+from django.conf import settings
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.utils import timezone
@@ -7,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import MealLog, ProteinLog
+from .services import SchoolMealConfigError, fetch_school_lunch
 from .serializers import (
     MealLogCreateSerializer,
     MealLogSerializer,
@@ -147,3 +149,34 @@ class MealLogDeleteView(APIView):
 
         meal_log.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SchoolLunchView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        target_date, error_response = _get_request_date(request)
+        if error_response:
+            return error_response
+
+        try:
+            lunch = fetch_school_lunch(target_date)
+        except SchoolMealConfigError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response(
+            {
+                'date': lunch['date'],
+                'school': {
+                    'education_office_code': settings.NEIS_ATPT_CODE,
+                    'school_code': settings.NEIS_SCHOOL_CODE,
+                },
+                'menus': lunch['menus'],
+                'total_protein': lunch['total_protein'],
+                'calories': lunch['calories'],
+                'nutrition_info': lunch['nutrition_info'],
+            },
+            status=status.HTTP_200_OK,
+        )
