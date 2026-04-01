@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import ProteinLog
+from .models import MealLog, ProteinLog
 
 
 User = get_user_model()
@@ -58,3 +58,107 @@ class ProteinApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(ProteinLog.objects.filter(id=protein_log.id).exists())
+
+
+class MealApiTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='meal@example.com',
+            password='password123',
+            weight=70,
+        )
+        self.client.force_authenticate(self.user)
+
+    def test_get_meal_overview(self):
+        MealLog.objects.create(
+            user=self.user,
+            date=timezone.localdate(),
+            meal_type=MealLog.MealType.LUNCH,
+            name='Chicken Salad',
+            calories=450,
+            protein=Decimal('35.0'),
+            carbs=Decimal('20.0'),
+            fat=Decimal('18.0'),
+        )
+        MealLog.objects.create(
+            user=self.user,
+            date=timezone.localdate(),
+            meal_type=MealLog.MealType.SNACK,
+            name='Greek Yogurt',
+            calories=180,
+            protein=Decimal('15.0'),
+            carbs=Decimal('12.0'),
+            fat=Decimal('5.0'),
+        )
+
+        response = self.client.get(reverse('meal_overview'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['total_calories'], 630)
+        self.assertEqual(response.data['total_protein'], '50.0')
+        self.assertEqual(len(response.data['meals']), 2)
+
+    def test_create_meal_log(self):
+        response = self.client.post(
+            reverse('meal_log_create'),
+            {
+                'type': MealLog.MealType.DINNER,
+                'name': 'Salmon Bowl',
+                'calories': 520,
+                'protein': '38.0',
+                'carbs': '42.0',
+                'fat': '20.0',
+                'memo': 'extra vegetables',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(MealLog.objects.count(), 1)
+        self.assertEqual(MealLog.objects.first().name, 'Salmon Bowl')
+
+    def test_delete_meal_log(self):
+        meal_log = MealLog.objects.create(
+            user=self.user,
+            date=timezone.localdate(),
+            meal_type=MealLog.MealType.BREAKFAST,
+            name='Egg Toast',
+            calories=320,
+            protein=Decimal('18.0'),
+            carbs=Decimal('28.0'),
+            fat=Decimal('14.0'),
+        )
+
+        response = self.client.delete(reverse('meal_log_delete', args=[meal_log.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(MealLog.objects.filter(id=meal_log.id).exists())
+
+    def test_get_meal_overview_with_date_query_param(self):
+        MealLog.objects.create(
+            user=self.user,
+            date=timezone.localdate(),
+            meal_type=MealLog.MealType.LUNCH,
+            name='Today Meal',
+            calories=400,
+            protein=Decimal('25.0'),
+            carbs=Decimal('30.0'),
+            fat=Decimal('10.0'),
+        )
+        MealLog.objects.create(
+            user=self.user,
+            date=timezone.datetime.strptime('2026-03-31', '%Y-%m-%d').date(),
+            meal_type=MealLog.MealType.DINNER,
+            name='Yesterday Meal',
+            calories=700,
+            protein=Decimal('45.0'),
+            carbs=Decimal('60.0'),
+            fat=Decimal('22.0'),
+        )
+
+        response = self.client.get(f"{reverse('meal_overview')}?date=2026-03-31")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['date'], '2026-03-31')
+        self.assertEqual(response.data['total_calories'], 700)
+        self.assertEqual(len(response.data['meals']), 1)
