@@ -6,8 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import ProteinLog
+from .models import MealLog, ProteinLog
 from .serializers import (
+    MealLogCreateSerializer,
+    MealLogSerializer,
+    MealOverviewSerializer,
     ProteinLogCreateSerializer,
     ProteinLogSerializer,
     ProteinOverviewSerializer,
@@ -25,6 +28,20 @@ def _get_target_amount(user):
     if not user.weight:
         return None
     return _quantize(Decimal(str(user.weight)) * DEFAULT_PROTEIN_MULTIPLIER)
+
+
+def _get_request_date(request):
+    date_value = request.query_params.get('date')
+    if not date_value:
+        return timezone.localdate(), None
+
+    try:
+        return timezone.datetime.strptime(date_value, '%Y-%m-%d').date(), None
+    except ValueError:
+        return None, Response(
+            {'detail': 'date must be in YYYY-MM-DD format.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class ProteinView(APIView):
@@ -84,4 +101,49 @@ class ProteinLogDeleteView(APIView):
             return Response({'detail': 'Protein log not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         protein_log.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MealView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        target_date, error_response = _get_request_date(request)
+        if error_response:
+            return error_response
+
+        meals = MealLog.objects.filter(user=request.user, date=target_date).order_by('-created_at', '-id')
+        serializer = MealOverviewSerializer(
+            {
+                'date': target_date,
+                'total_calories': sum(meal.calories for meal in meals),
+                'total_protein': _quantize(sum((meal.protein for meal in meals), Decimal('0.0'))),
+                'total_carbs': _quantize(sum((meal.carbs for meal in meals), Decimal('0.0'))),
+                'total_fat': _quantize(sum((meal.fat for meal in meals), Decimal('0.0'))),
+                'meals': meals,
+            }
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MealLogCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = MealLogCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        meal_log = serializer.save(user=request.user)
+        return Response(MealLogSerializer(meal_log).data, status=status.HTTP_201_CREATED)
+
+
+class MealLogDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, meal_id):
+        try:
+            meal_log = MealLog.objects.get(id=meal_id, user=request.user)
+        except MealLog.DoesNotExist:
+            return Response({'detail': 'Meal log not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        meal_log.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
