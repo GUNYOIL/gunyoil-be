@@ -1,7 +1,16 @@
+from datetime import timedelta
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from diet.models import ProteinLog
+from exercises.models import Exercise
+from routines.models import Routine, RoutineDetail
+from workouts.models import DailyLog
 
 
 User = get_user_model()
@@ -13,8 +22,15 @@ class UserApiTests(APITestCase):
             email='user@example.com',
             password='password123',
             onboarding_completed=True,
+            weight=70,
         )
         self.client.force_authenticate(self.user)
+
+    def _create_daily_log(self, date, is_completed):
+        log = DailyLog.objects.create(user=self.user, is_completed=is_completed)
+        DailyLog.objects.filter(id=log.id).update(date=date)
+        log.refresh_from_db()
+        return log
 
     def test_save_onboarding_draft(self):
         response = self.client.put(
@@ -33,3 +49,60 @@ class UserApiTests(APITestCase):
         self.assertEqual(self.user.height, 180)
         self.assertEqual(self.user.weight, 78)
         self.assertFalse(self.user.onboarding_completed)
+
+    def test_get_dashboard(self):
+        today = timezone.localdate()
+        exercise = Exercise.objects.create(name='Bench Press', category='CHEST', target_muscle='chest')
+        routine = Routine.objects.create(user=self.user, day_of_week=today.weekday())
+        RoutineDetail.objects.create(
+            routine=routine,
+            exercise=exercise,
+            target_weight=60,
+            target_reps=10,
+            target_sets=2,
+            order=1,
+        )
+        self._create_daily_log(today - timedelta(days=1), True)
+        ProteinLog.objects.create(
+            user=self.user,
+            date=today,
+            amount=Decimal('30.0'),
+            log_type=ProteinLog.LogType.MEAL,
+        )
+
+        response = self.client.get(reverse('dashboard'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['protein']['target_amount'], '112.0')
+        self.assertEqual(response.data['protein']['consumed_amount'], '30.0')
+        self.assertEqual(len(response.data['today_workout']['sets']), 2)
+        self.assertEqual(len(response.data['recent_workouts']), 1)
+
+    def test_get_grass(self):
+        self._create_daily_log(timezone.localdate() - timedelta(days=1), False)
+        self._create_daily_log(timezone.localdate(), True)
+
+        response = self.client.get(reverse('grass'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_change_password(self):
+        response = self.client.patch(
+            reverse('password_change'),
+            {
+                'current_password': 'password123',
+                'new_password': 'newpassword456',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('newpassword456'))
+
+    def test_delete_me(self):
+        response = self.client.delete(reverse('me'))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(id=self.user.id).exists())
