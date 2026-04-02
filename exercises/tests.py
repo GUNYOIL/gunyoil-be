@@ -20,12 +20,14 @@ class ExerciseApiTests(APITestCase):
         response = self.client.get(f"{reverse('exercise_list')}?target_muscle=lat")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['name'], 'Lat Pulldown')
+        self.assertTrue(response.data['success'])
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['name'], 'Lat Pulldown')
 
     def test_filter_exercises_by_search(self):
         response = self.client.get(f"{reverse('exercise_list')}?search=bench")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['name'], 'Bench Press')
+        self.assertTrue(response.data['success'])
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['name'], 'Bench Press')
