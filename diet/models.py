@@ -64,3 +64,36 @@ class MealLog(models.Model):
 
     def __str__(self):
         return f'{self.user.email} - {self.date} - {self.name}'
+
+
+class SchoolMealSelectionLog(models.Model):
+    class MealType(models.TextChoices):
+        BREAKFAST = 'breakfast', 'Breakfast'
+        LUNCH = 'lunch', 'Lunch'
+        DINNER = 'dinner', 'Dinner'
+
+    class SelectionType(models.TextChoices):
+        NONE = 'none', 'None'
+        SMALL = 'small', 'Small'
+        MEDIUM = 'medium', 'Medium'
+        LARGE = 'large', 'Large'
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='school_meal_selection_logs',
+    )
+    date = models.DateField()
+    meal_type = models.CharField(max_length=20, choices=MealType.choices)
+    menu_name = models.CharField(max_length=100)
+    selection = models.CharField(max_length=20, choices=SelectionType.choices)
+    estimated_protein_grams = models.DecimalField(max_digits=6, decimal_places=1)
+    final_protein_grams = models.DecimalField(max_digits=6, decimal_places=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['meal_type', 'menu_name']
+
+    def __str__(self):
+        return f'{self.user.email} - {self.date} - {self.meal_type} - {self.menu_name}'
