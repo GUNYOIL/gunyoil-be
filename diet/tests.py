@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import MealLog, ProteinLog
+from .models import MealLog, ProteinLog, SchoolMealSelectionLog
 
 
 User = get_user_model()
@@ -175,18 +175,101 @@ class MealApiTests(APITestCase):
         mock_fetch_school_lunch.return_value = {
             'date': timezone.localdate(),
             'menus': [
-                {'name': '닭갈비 볶음', 'protein_grams': None},
+                {'name': '닭갈비볶음', 'protein_grams': None},
                 {'name': '계란국', 'protein_grams': None},
+                {'name': '잡곡밥', 'protein_grams': None},
             ],
             'total_protein': 12.3,
             'calories': '850.5 Kcal',
             'nutrition_info': '탄수화물(g) 120.0<br/>단백질(g) 12.3<br/>지방(g) 20.1',
         }
 
-        response = self.client.get(reverse('school_lunch'))
+        response = self.client.get(f"{reverse('school_lunch')}?meal_type=breakfast")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['school']['education_office_code'], 'G10')
         self.assertEqual(response.data['school']['school_code'], '7430310')
+        self.assertEqual(response.data['meal_type'], 'breakfast')
         self.assertEqual(len(response.data['menus']), 2)
-        self.assertEqual(response.data['total_protein'], 12.3)
+        self.assertEqual(response.data['estimated_total_protein'], 18.0)
+        self.assertEqual(response.data['school_total_protein'], 12.3)
+        self.assertEqual(response.data['menus'][0]['selection_options']['small'], 6.0)
+        self.assertEqual(response.data['menus'][0]['selection_options']['medium'], 12.0)
+        self.assertEqual(response.data['menus'][0]['selection_options']['large'], 18.0)
+
+    def test_save_school_lunch_selection(self):
+        response = self.client.post(
+            reverse('school_lunch_log_save'),
+            {
+                'meal_type': 'breakfast',
+                'items': [
+                    {
+                        'menu_name': '닭갈비볶음',
+                        'selection': 'medium',
+                        'estimated_protein_grams': '12.0',
+                        'final_protein_grams': '12.0',
+                    },
+                    {
+                        'menu_name': '계란국',
+                        'selection': 'small',
+                        'estimated_protein_grams': '6.0',
+                        'final_protein_grams': '3.0',
+                    },
+                ],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['meal_type'], 'breakfast')
+        self.assertEqual(response.data['total_protein'], '15.0')
+        self.assertEqual(SchoolMealSelectionLog.objects.count(), 2)
+
+        protein_log = ProteinLog.objects.get(note='school-lunch:breakfast')
+        self.assertEqual(protein_log.amount, Decimal('15.0'))
+
+    def test_save_school_lunch_selection_overwrites_same_meal_type(self):
+        SchoolMealSelectionLog.objects.create(
+            user=self.user,
+            date=timezone.localdate(),
+            meal_type='breakfast',
+            menu_name='이전메뉴',
+            selection='medium',
+            estimated_protein_grams='10.0',
+            final_protein_grams='10.0',
+        )
+        ProteinLog.objects.create(
+            user=self.user,
+            date=timezone.localdate(),
+            amount='10.0',
+            log_type=ProteinLog.LogType.MEAL,
+            note='school-lunch:breakfast',
+        )
+
+        response = self.client.post(
+            reverse('school_lunch_log_save'),
+            {
+                'meal_type': 'breakfast',
+                'items': [
+                    {
+                        'menu_name': '새메뉴',
+                        'selection': 'large',
+                        'estimated_protein_grams': '8.0',
+                        'final_protein_grams': '12.0',
+                    }
+                ],
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(SchoolMealSelectionLog.objects.count(), 1)
+        self.assertEqual(SchoolMealSelectionLog.objects.first().menu_name, '새메뉴')
+        self.assertEqual(
+            ProteinLog.objects.filter(note='school-lunch:breakfast').count(),
+            1,
+        )
+        self.assertEqual(
+            ProteinLog.objects.get(note='school-lunch:breakfast').amount,
+            Decimal('12.0'),
+        )
