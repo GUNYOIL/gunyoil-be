@@ -1,14 +1,13 @@
-from django.conf import settings
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import MealLog, ProteinLog
-from .services import SchoolMealConfigError, fetch_school_lunch
+from .models import MealLog, ProteinLog, SchoolMealSelectionLog
 from .serializers import (
     MealLogCreateSerializer,
     MealLogSerializer,
@@ -16,7 +15,10 @@ from .serializers import (
     ProteinLogCreateSerializer,
     ProteinLogSerializer,
     ProteinOverviewSerializer,
+    SchoolMealSelectionLogSerializer,
+    SchoolMealSelectionSaveSerializer,
 )
+from .services import SchoolMealConfigError, fetch_school_lunch, transform_school_meal_for_app
 
 
 DEFAULT_PROTEIN_MULTIPLIER = Decimal('1.6')
@@ -46,15 +48,23 @@ def _get_request_date(request):
         )
 
 
+def _get_meal_type(request):
+    meal_type = request.query_params.get('meal_type', 'breakfast').lower()
+    if meal_type not in {'breakfast', 'lunch', 'dinner'}:
+        return None, Response(
+            {'detail': 'meal_type must be one of breakfast, lunch, dinner.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return meal_type, None
+
+
 class ProteinView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         today = timezone.localdate()
         logs = ProteinLog.objects.filter(user=request.user, date=today).order_by('-created_at', '-id')
-        consumed_amount = _quantize(
-            sum((log.amount for log in logs), Decimal('0.0'))
-        )
+        consumed_amount = _quantize(sum((log.amount for log in logs), Decimal('0.0')))
         target_amount = _get_target_amount(request.user)
 
         remaining_amount = None
@@ -63,10 +73,7 @@ class ProteinView(APIView):
 
         if target_amount is not None and target_amount > 0:
             remaining_amount = _quantize(max(target_amount - consumed_amount, Decimal('0.0')))
-            progress_percent = min(
-                int((consumed_amount / target_amount) * 100),
-                100,
-            )
+            progress_percent = min(int((consumed_amount / target_amount) * 100), 100)
             is_target_completed = consumed_amount >= target_amount
 
         serializer = ProteinOverviewSerializer(
@@ -159,24 +166,93 @@ class SchoolLunchView(APIView):
         if error_response:
             return error_response
 
+        meal_type, meal_type_error = _get_meal_type(request)
+        if meal_type_error:
+            return meal_type_error
+
         try:
-            lunch = fetch_school_lunch(target_date)
+            lunch = fetch_school_lunch(target_date, meal_type=meal_type)
         except SchoolMealConfigError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except ValueError as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
 
+        transformed_meal = transform_school_meal_for_app(lunch, meal_type)
+
         return Response(
             {
-                'date': lunch['date'],
+                'date': transformed_meal['date'],
                 'school': {
                     'education_office_code': settings.NEIS_ATPT_CODE,
                     'school_code': settings.NEIS_SCHOOL_CODE,
                 },
-                'menus': lunch['menus'],
-                'total_protein': lunch['total_protein'],
-                'calories': lunch['calories'],
-                'nutrition_info': lunch['nutrition_info'],
+                'meal_type': transformed_meal['meal_type'],
+                'meal_type_label': transformed_meal['meal_type_label'],
+                'menus': transformed_meal['menus'],
+                'estimated_total_protein': transformed_meal['estimated_total_protein'],
+                'school_total_protein': transformed_meal['school_total_protein'],
+                'calories': transformed_meal['calories'],
+                'nutrition_info': transformed_meal['nutrition_info'],
             },
             status=status.HTTP_200_OK,
+        )
+
+
+class SchoolLunchSelectionSaveView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = SchoolMealSelectionSaveSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        target_date = serializer.validated_data.get('date', timezone.localdate())
+        meal_type = serializer.validated_data['meal_type']
+        items = serializer.validated_data['items']
+
+        SchoolMealSelectionLog.objects.filter(
+            user=request.user,
+            date=target_date,
+            meal_type=meal_type,
+        ).delete()
+
+        selection_logs = []
+        total_protein = Decimal('0.0')
+
+        for item in items:
+            selection_log = SchoolMealSelectionLog.objects.create(
+                user=request.user,
+                date=target_date,
+                meal_type=meal_type,
+                menu_name=item['menu_name'],
+                selection=item['selection'],
+                estimated_protein_grams=item['estimated_protein_grams'],
+                final_protein_grams=item['final_protein_grams'],
+            )
+            selection_logs.append(selection_log)
+            total_protein += item['final_protein_grams']
+
+        ProteinLog.objects.filter(
+            user=request.user,
+            date=target_date,
+            log_type=ProteinLog.LogType.MEAL,
+            note=f'school-lunch:{meal_type}',
+        ).delete()
+
+        protein_log = ProteinLog.objects.create(
+            user=request.user,
+            date=target_date,
+            amount=_quantize(total_protein),
+            log_type=ProteinLog.LogType.MEAL,
+            note=f'school-lunch:{meal_type}',
+        )
+
+        return Response(
+            {
+                'date': target_date,
+                'meal_type': meal_type,
+                'total_protein': str(protein_log.amount),
+                'protein_log_id': protein_log.id,
+                'items': SchoolMealSelectionLogSerializer(selection_logs, many=True).data,
+            },
+            status=status.HTTP_201_CREATED,
         )
