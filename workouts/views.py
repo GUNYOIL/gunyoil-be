@@ -2,9 +2,9 @@ import datetime
 
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from config.api import error_response, success_response
 from routines.models import Routine
 
 from .models import DailyLog, WorkoutSet
@@ -23,7 +23,7 @@ class WorkoutHistoryView(APIView):
     def get(self, request):
         logs = DailyLog.objects.filter(user=request.user, is_completed=True).order_by('date')
         serializer = DailyLogSerializer(logs, many=True)
-        return Response(serializer.data)
+        return success_response(serializer.data)
 
 
 class TodayWorkoutView(APIView):
@@ -53,14 +53,14 @@ class TodayWorkoutView(APIView):
                             is_completed=False,
                         )
 
-        return Response(TodayLogSerializer(log).data)
+        return success_response(TodayLogSerializer(log).data)
 
     def put(self, request):
         today = datetime.date.today()
         log = DailyLog.objects.filter(user=request.user, date=today).first()
 
         if not log:
-            return Response({"error": "오늘의 운동 기록이 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            return error_response('오늘의 운동 기록이 없습니다.', code='workout_log_not_found', status_code=status.HTTP_404_NOT_FOUND)
 
         serializer = TodayWorkoutSaveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -69,9 +69,10 @@ class TodayWorkoutView(APIView):
             try:
                 workout_set = WorkoutSet.objects.get(id=set_data['set_id'], daily_log=log)
             except WorkoutSet.DoesNotExist:
-                return Response(
-                    {"error": f"Workout set {set_data['set_id']} not found."},
-                    status=status.HTTP_404_NOT_FOUND,
+                return error_response(
+                    f"Workout set {set_data['set_id']} not found.",
+                    code='workout_set_not_found',
+                    status_code=status.HTTP_404_NOT_FOUND,
                 )
 
             if 'weight' in set_data:
@@ -86,7 +87,7 @@ class TodayWorkoutView(APIView):
             log.is_completed = serializer.validated_data['is_completed']
         log.save()
 
-        return Response(TodayLogSerializer(log).data)
+        return success_response(TodayLogSerializer(log).data, '오늘 운동 기록이 저장되었습니다.')
 
 
 class TodayWorkoutSetCreateView(APIView):
@@ -103,7 +104,7 @@ class TodayWorkoutSetCreateView(APIView):
                 daily_log__date=datetime.date.today(),
             )
         except WorkoutSet.DoesNotExist:
-            return Response({"error": "Workout set not found for today."}, status=status.HTTP_404_NOT_FOUND)
+            return error_response('Workout set not found for today.', code='workout_set_not_found', status_code=status.HTTP_404_NOT_FOUND)
 
         if 'weight' in serializer.validated_data:
             workout_set.weight = serializer.validated_data['weight']
@@ -113,4 +114,4 @@ class TodayWorkoutSetCreateView(APIView):
             workout_set.is_completed = serializer.validated_data['is_completed']
 
         workout_set.save()
-        return Response(WorkoutSetSerializer(workout_set).data, status=status.HTTP_200_OK)
+        return success_response(WorkoutSetSerializer(workout_set).data, '세트 기록이 저장되었습니다.')
