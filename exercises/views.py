@@ -1,7 +1,7 @@
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from config.api import success_response
 from .models import Exercise
 from .serializers import ExerciseSerializer
 
@@ -25,4 +25,4 @@ class ExerciseListView(APIView):
             queryset = queryset.filter(name__icontains=search)
 
         serializer = ExerciseSerializer(queryset, many=True)
-        return Response(serializer.data)
+        return success_response(serializer.data)
