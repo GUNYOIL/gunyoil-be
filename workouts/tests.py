@@ -29,7 +29,7 @@ class WorkoutApiTests(APITestCase):
 
     def test_save_today_set_via_post_endpoint(self):
         today_response = self.client.get(reverse('workout_today'))
-        set_id = today_response.data['sets'][0]['id']
+        set_id = today_response.data['data']['sets'][0]['id']
 
         response = self.client.post(
             reverse('workout_set_update'),
@@ -43,13 +43,14 @@ class WorkoutApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['weight'], 105.0)
-        self.assertTrue(response.data['is_completed'])
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['data']['weight'], 105.0)
+        self.assertTrue(response.data['data']['is_completed'])
 
     def test_save_today_workout_via_put_endpoint(self):
         today_response = self.client.get(reverse('workout_today'))
-        first_set_id = today_response.data['sets'][0]['id']
-        second_set_id = today_response.data['sets'][1]['id']
+        first_set_id = today_response.data['data']['sets'][0]['id']
+        second_set_id = today_response.data['data']['sets'][1]['id']
 
         response = self.client.put(
             reverse('workout_today'),
@@ -74,6 +75,7 @@ class WorkoutApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(response.data['is_completed'])
-        self.assertEqual(len(response.data['sets']), 2)
-        self.assertTrue(all(item['is_completed'] for item in response.data['sets']))
+        self.assertTrue(response.data['success'])
+        self.assertTrue(response.data['data']['is_completed'])
+        self.assertEqual(len(response.data['data']['sets']), 2)
+        self.assertTrue(all(item['is_completed'] for item in response.data['data']['sets']))
