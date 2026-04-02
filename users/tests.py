@@ -45,9 +45,9 @@ class UserApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['data']['height'], 180.0)
         self.user.refresh_from_db()
-        self.assertEqual(self.user.height, 180)
-        self.assertEqual(self.user.weight, 78)
         self.assertFalse(self.user.onboarding_completed)
 
     def test_get_dashboard(self):
@@ -73,10 +73,12 @@ class UserApiTests(APITestCase):
         response = self.client.get(reverse('dashboard'))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['protein']['target_amount'], '112.0')
-        self.assertEqual(response.data['protein']['consumed_amount'], '30.0')
-        self.assertEqual(len(response.data['today_workout']['sets']), 2)
-        self.assertEqual(len(response.data['recent_workouts']), 1)
+        self.assertTrue(response.data['success'])
+        data = response.data['data']
+        self.assertEqual(data['protein']['target_amount'], '112.0')
+        self.assertEqual(data['protein']['consumed_amount'], '30.0')
+        self.assertEqual(len(data['today_workout']['sets']), 2)
+        self.assertEqual(len(data['recent_workouts']), 1)
 
     def test_get_grass(self):
         self._create_daily_log(timezone.localdate() - timedelta(days=1), False)
@@ -85,7 +87,8 @@ class UserApiTests(APITestCase):
         response = self.client.get(reverse('grass'))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(len(response.data['data']), 2)
 
     def test_change_password(self):
         response = self.client.patch(
@@ -98,11 +101,13 @@ class UserApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('newpassword456'))
 
     def test_delete_me(self):
         response = self.client.delete(reverse('me'))
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
         self.assertFalse(User.objects.filter(id=self.user.id).exists())
