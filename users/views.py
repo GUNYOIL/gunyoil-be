@@ -3,13 +3,13 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from config.api import error_response, success_response
 from diet.models import ProteinLog
 from routines.models import Routine
-from workouts.models import DailyLog, WorkoutSet
+from workouts.models import DailyLog
 from workouts.serializers import DailyLogSerializer, TodayLogSerializer
 
 from .serializers import (
@@ -81,8 +81,8 @@ class SignupView(APIView):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "회원가입 성공"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return success_response(None, '회원가입 성공', status.HTTP_201_CREATED)
+        return error_response('Request validation failed.', errors=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
 
 
 class UserProfileView(APIView):
@@ -90,18 +90,18 @@ class UserProfileView(APIView):
 
     def get(self, request):
         serializer = UserSerializer(request.user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 
     def put(self, request):
         serializer = UserSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return success_response(serializer.data, '프로필이 저장되었습니다.')
+        return error_response('Request validation failed.', errors=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):
         request.user.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return success_response(None, '회원 탈퇴가 완료되었습니다.')
 
 
 class OnboardingDraftView(APIView):
@@ -111,7 +111,7 @@ class OnboardingDraftView(APIView):
         serializer = UserSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(onboarding_completed=False)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data, '온보딩 초안이 저장되었습니다.')
 
 
 class OnboardingCompleteView(APIView):
@@ -121,10 +121,7 @@ class OnboardingCompleteView(APIView):
         user = request.user
         user.onboarding_completed = True
         user.save()
-        return Response(
-            {"message": "온보딩이 완료되었습니다.", "onboarding_completed": True},
-            status=status.HTTP_200_OK,
-        )
+        return success_response({'onboarding_completed': True}, '온보딩이 완료되었습니다.')
 
 
 class DashboardView(APIView):
@@ -157,7 +154,7 @@ class DashboardView(APIView):
                 'recent_workouts': DailyLogSerializer(recent_workouts, many=True).data,
             }
         )
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 
 
 class GrassView(APIView):
@@ -166,7 +163,7 @@ class GrassView(APIView):
     def get(self, request):
         logs = DailyLog.objects.filter(user=request.user).order_by('date')
         serializer = GrassEntrySerializer(logs, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return success_response(serializer.data)
 
 
 class PasswordChangeView(APIView):
@@ -178,7 +175,7 @@ class PasswordChangeView(APIView):
 
         request.user.set_password(serializer.validated_data['new_password'])
         request.user.save()
-        return Response({'message': 'Password updated successfully.'}, status=status.HTTP_200_OK)
+        return success_response(None, '비밀번호가 변경되었습니다.')
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
