@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import MealLog, ProteinLog
+from .models import MealLog, ProteinLog, SchoolMealSelectionLog
 
 
 class ProteinLogSerializer(serializers.ModelSerializer):
@@ -105,3 +105,46 @@ class MealOverviewSerializer(serializers.Serializer):
     total_carbs = serializers.DecimalField(max_digits=6, decimal_places=1)
     total_fat = serializers.DecimalField(max_digits=6, decimal_places=1)
     meals = MealLogSerializer(many=True)
+
+
+class SchoolMealSelectionItemSerializer(serializers.Serializer):
+    menu_name = serializers.CharField(max_length=100)
+    selection = serializers.ChoiceField(choices=SchoolMealSelectionLog.SelectionType.choices)
+    estimated_protein_grams = serializers.DecimalField(max_digits=6, decimal_places=1)
+    final_protein_grams = serializers.DecimalField(max_digits=6, decimal_places=1)
+
+    def validate_estimated_protein_grams(self, value):
+        if value < Decimal('0'):
+            raise serializers.ValidationError('estimated_protein_grams must be 0 or greater.')
+        return value
+
+    def validate_final_protein_grams(self, value):
+        if value < Decimal('0'):
+            raise serializers.ValidationError('final_protein_grams must be 0 or greater.')
+        return value
+
+
+class SchoolMealSelectionSaveSerializer(serializers.Serializer):
+    date = serializers.DateField(required=False)
+    meal_type = serializers.ChoiceField(choices=SchoolMealSelectionLog.MealType.choices)
+    items = SchoolMealSelectionItemSerializer(many=True)
+
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError('items must not be empty.')
+        return value
+
+
+class SchoolMealSelectionLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SchoolMealSelectionLog
+        fields = [
+            'id',
+            'date',
+            'meal_type',
+            'menu_name',
+            'selection',
+            'estimated_protein_grams',
+            'final_protein_grams',
+            'created_at',
+        ]
