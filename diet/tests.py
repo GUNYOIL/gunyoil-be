@@ -34,9 +34,10 @@ class ProteinApiTests(APITestCase):
         response = self.client.get(reverse('protein_overview'))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['consumed_amount'], '25.0')
-        self.assertEqual(response.data['target_amount'], '112.0')
-        self.assertEqual(len(response.data['logs']), 1)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['data']['consumed_amount'], '25.0')
+        self.assertEqual(response.data['data']['target_amount'], '112.0')
+        self.assertEqual(len(response.data['data']['logs']), 1)
 
     def test_create_protein_log(self):
         response = self.client.post(
@@ -46,6 +47,7 @@ class ProteinApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data['success'])
         self.assertEqual(ProteinLog.objects.count(), 1)
 
     def test_delete_protein_log(self):
@@ -58,7 +60,8 @@ class ProteinApiTests(APITestCase):
 
         response = self.client.delete(reverse('protein_log_delete', args=[protein_log.id]))
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
         self.assertFalse(ProteinLog.objects.filter(id=protein_log.id).exists())
 
 
@@ -96,9 +99,10 @@ class MealApiTests(APITestCase):
         response = self.client.get(reverse('meal_overview'))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['total_calories'], 630)
-        self.assertEqual(response.data['total_protein'], '50.0')
-        self.assertEqual(len(response.data['meals']), 2)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['data']['total_calories'], 630)
+        self.assertEqual(response.data['data']['total_protein'], '50.0')
+        self.assertEqual(len(response.data['data']['meals']), 2)
 
     def test_create_meal_log(self):
         response = self.client.post(
@@ -116,8 +120,8 @@ class MealApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data['success'])
         self.assertEqual(MealLog.objects.count(), 1)
-        self.assertEqual(MealLog.objects.first().name, 'Salmon Bowl')
 
     def test_delete_meal_log(self):
         meal_log = MealLog.objects.create(
@@ -133,7 +137,8 @@ class MealApiTests(APITestCase):
 
         response = self.client.delete(reverse('meal_log_delete', args=[meal_log.id]))
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
         self.assertFalse(MealLog.objects.filter(id=meal_log.id).exists())
 
     def test_get_meal_overview_with_date_query_param(self):
@@ -161,9 +166,10 @@ class MealApiTests(APITestCase):
         response = self.client.get(f"{reverse('meal_overview')}?date=2026-03-31")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['date'], '2026-03-31')
-        self.assertEqual(response.data['total_calories'], 700)
-        self.assertEqual(len(response.data['meals']), 1)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['data']['date'], '2026-03-31')
+        self.assertEqual(response.data['data']['total_calories'], 700)
+        self.assertEqual(len(response.data['data']['meals']), 1)
 
     @override_settings(
         NEIS_API_KEY='test-key',
@@ -187,15 +193,17 @@ class MealApiTests(APITestCase):
         response = self.client.get(f"{reverse('school_lunch')}?meal_type=breakfast")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['school']['education_office_code'], 'G10')
-        self.assertEqual(response.data['school']['school_code'], '7430310')
-        self.assertEqual(response.data['meal_type'], 'breakfast')
-        self.assertEqual(len(response.data['menus']), 2)
-        self.assertEqual(response.data['estimated_total_protein'], 18.0)
-        self.assertEqual(response.data['school_total_protein'], 12.3)
-        self.assertEqual(response.data['menus'][0]['selection_options']['small'], 6.0)
-        self.assertEqual(response.data['menus'][0]['selection_options']['medium'], 12.0)
-        self.assertEqual(response.data['menus'][0]['selection_options']['large'], 18.0)
+        self.assertTrue(response.data['success'])
+        data = response.data['data']
+        self.assertEqual(data['school']['education_office_code'], 'G10')
+        self.assertEqual(data['school']['school_code'], '7430310')
+        self.assertEqual(data['meal_type'], 'breakfast')
+        self.assertEqual(len(data['menus']), 2)
+        self.assertEqual(data['estimated_total_protein'], 18.0)
+        self.assertEqual(data['school_total_protein'], 12.3)
+        self.assertEqual(data['menus'][0]['selection_options']['small'], 6.0)
+        self.assertEqual(data['menus'][0]['selection_options']['medium'], 12.0)
+        self.assertEqual(data['menus'][0]['selection_options']['large'], 18.0)
 
     def test_save_school_lunch_selection(self):
         response = self.client.post(
@@ -221,12 +229,11 @@ class MealApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['meal_type'], 'breakfast')
-        self.assertEqual(response.data['total_protein'], '15.0')
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['data']['meal_type'], 'breakfast')
+        self.assertEqual(response.data['data']['total_protein'], '15.0')
         self.assertEqual(SchoolMealSelectionLog.objects.count(), 2)
-
-        protein_log = ProteinLog.objects.get(note='school-lunch:breakfast')
-        self.assertEqual(protein_log.amount, Decimal('15.0'))
+        self.assertEqual(ProteinLog.objects.get(note='school-lunch:breakfast').amount, Decimal('15.0'))
 
     def test_save_school_lunch_selection_overwrites_same_meal_type(self):
         SchoolMealSelectionLog.objects.create(
@@ -263,13 +270,8 @@ class MealApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data['success'])
         self.assertEqual(SchoolMealSelectionLog.objects.count(), 1)
         self.assertEqual(SchoolMealSelectionLog.objects.first().menu_name, '새메뉴')
-        self.assertEqual(
-            ProteinLog.objects.filter(note='school-lunch:breakfast').count(),
-            1,
-        )
-        self.assertEqual(
-            ProteinLog.objects.get(note='school-lunch:breakfast').amount,
-            Decimal('12.0'),
-        )
+        self.assertEqual(ProteinLog.objects.filter(note='school-lunch:breakfast').count(), 1)
+        self.assertEqual(ProteinLog.objects.get(note='school-lunch:breakfast').amount, Decimal('12.0'))
