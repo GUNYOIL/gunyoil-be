@@ -7,8 +7,68 @@ from django.conf import settings
 
 
 NEIS_MEAL_API_URL = 'https://open.neis.go.kr/hub/mealServiceDietInfo'
-PROTEIN_PATTERN = re.compile(r'단백질\(g\)\s*([0-9.]+)')
+PROTEIN_PATTERN = re.compile('\ub2e8\ubc31\uc9c8\\(g\\)\\s*([0-9.]+)')
 ALLERGY_PATTERN = re.compile(r'\s*\([^)]*\)')
+MEAL_TYPE_CODES = {
+    'breakfast': '1',
+    'lunch': '2',
+    'dinner': '3',
+}
+MEAL_TYPE_LABELS = {
+    'breakfast': 'Breakfast',
+    'lunch': 'Lunch',
+    'dinner': 'Dinner',
+}
+PORTION_MULTIPLIERS = {
+    'none': 0.0,
+    'small': 0.5,
+    'medium': 1.0,
+    'large': 1.5,
+}
+PROTEIN_KEYWORD_ESTIMATES = [
+    ('\ub2ed\uac08\ube44', 12.0),
+    ('\ub2ed', 12.0),
+    ('\ub2ed\ubd09', 11.0),
+    ('\uacc4\ub780', 6.0),
+    ('\ub2ec\uac40', 6.0),
+    ('\ub450\ubd80', 8.0),
+    ('\ucf69', 7.0),
+    ('\ub3c8\uc721', 11.0),
+    ('\ub3fc\uc9c0', 11.0),
+    ('\uc81c\uc721', 11.0),
+    ('\uc18c\uace0\uae30', 12.0),
+    ('\ubd88\uace0\uae30', 12.0),
+    ('\ud584', 7.0),
+    ('\uc18c\uc2dc\uc9c0', 7.0),
+    ('\ucc38\uce58', 10.0),
+    ('\uace0\ub4f1\uc5b4', 11.0),
+    ('\uc5f0\uc5b4', 11.0),
+    ('\uc0dd\uc120', 10.0),
+    ('\uc624\uc9d5\uc5b4', 10.0),
+    ('\uc0c8\uc6b0', 9.0),
+    ('\uc870\uac1c', 9.0),
+    ('\uce58\uc988', 6.0),
+    ('\uc6b0\uc720', 6.0),
+    ('\uc694\uac70\ud2b8', 5.0),
+]
+EXCLUDED_MENU_KEYWORDS = [
+    '\ubc25',
+    '\uc7a1\uace1\ubc25',
+    '\ub204\ub8fd\uc9c0',
+    '\uc8fd',
+    '\ube75',
+    '\uba74',
+    '\uad6d',
+    '\ud0d5',
+    '\ucc0c\uac1c',
+    '\uae40\uce58',
+    '\ub098\ubb3c',
+    '\ubb34\uce68',
+    '\uc0d0\ub7ec\ub4dc',
+    '\uacfc\uc77c',
+    '\uc74c\ub8cc',
+    '\uc8fc\uc2a4',
+]
 
 
 class SchoolMealConfigError(Exception):
@@ -30,9 +90,60 @@ def _extract_total_protein(nutrition_info):
     return float(match.group(1))
 
 
-def fetch_school_lunch(meal_date):
+def _estimate_menu_protein_grams(menu_name):
+    matched_values = [grams for keyword, grams in PROTEIN_KEYWORD_ESTIMATES if keyword in menu_name]
+    if matched_values:
+        return max(matched_values)
+
+    if any(keyword in menu_name for keyword in EXCLUDED_MENU_KEYWORDS):
+        return None
+
+    return None
+
+
+def _build_selection_options(base_grams):
+    return {
+        key: round(base_grams * multiplier, 1)
+        for key, multiplier in PORTION_MULTIPLIERS.items()
+    }
+
+
+def transform_school_meal_for_app(school_meal, meal_type):
+    items = []
+    total_estimated_protein = 0.0
+
+    for menu in school_meal['menus']:
+        estimated_protein = _estimate_menu_protein_grams(menu['name'])
+        if estimated_protein is None:
+            continue
+
+        total_estimated_protein += estimated_protein
+        items.append(
+            {
+                'name': menu['name'],
+                'estimated_protein_grams': round(estimated_protein, 1),
+                'selection_options': _build_selection_options(estimated_protein),
+                'default_selection': 'none',
+            }
+        )
+
+    return {
+        'date': school_meal['date'],
+        'meal_type': meal_type,
+        'meal_type_label': MEAL_TYPE_LABELS[meal_type],
+        'menus': items,
+        'estimated_total_protein': round(total_estimated_protein, 1),
+        'school_total_protein': school_meal['total_protein'],
+        'calories': school_meal['calories'],
+        'nutrition_info': school_meal['nutrition_info'],
+    }
+
+
+def fetch_school_lunch(meal_date, meal_type='lunch'):
     if not settings.NEIS_API_KEY or not settings.NEIS_ATPT_CODE or not settings.NEIS_SCHOOL_CODE:
         raise SchoolMealConfigError('NEIS school lunch settings are not configured.')
+    if meal_type not in MEAL_TYPE_CODES:
+        raise ValueError('meal_type must be one of breakfast, lunch, dinner.')
 
     query = urlencode(
         {
@@ -41,6 +152,7 @@ def fetch_school_lunch(meal_date):
             'ATPT_OFCDC_SC_CODE': settings.NEIS_ATPT_CODE,
             'SD_SCHUL_CODE': settings.NEIS_SCHOOL_CODE,
             'MLSV_YMD': meal_date.strftime('%Y%m%d'),
+            'MMEAL_SC_CODE': MEAL_TYPE_CODES[meal_type],
         }
     )
 
@@ -52,6 +164,7 @@ def fetch_school_lunch(meal_date):
         if code == 'INFO-200':
             return {
                 'date': meal_date,
+                'meal_type': meal_type,
                 'menus': [],
                 'total_protein': None,
                 'calories': None,
@@ -63,6 +176,7 @@ def fetch_school_lunch(meal_date):
     if len(meal_rows) < 2 or 'row' not in meal_rows[1]:
         return {
             'date': meal_date,
+            'meal_type': meal_type,
             'menus': [],
             'total_protein': None,
             'calories': None,
@@ -82,6 +196,7 @@ def fetch_school_lunch(meal_date):
 
     return {
         'date': meal_date,
+        'meal_type': meal_type,
         'menus': menus,
         'total_protein': _extract_total_protein(meal.get('NTR_INFO', '')),
         'calories': meal.get('CAL_INFO'),
