@@ -8,6 +8,7 @@ from .serializers import ExerciseSerializer
 
 class ExerciseListView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = ExerciseSerializer
 
     def get(self, request):
         queryset = Exercise.objects.all()
