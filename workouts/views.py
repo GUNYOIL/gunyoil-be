@@ -19,6 +19,7 @@ from .serializers import (
 
 class WorkoutHistoryView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = DailyLogSerializer
 
     def get(self, request):
         logs = DailyLog.objects.filter(user=request.user, is_completed=True).order_by('date')
@@ -28,6 +29,7 @@ class WorkoutHistoryView(APIView):
 
 class TodayWorkoutView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = TodayLogSerializer
 
     def get(self, request):
         today = datetime.date.today()
@@ -92,6 +94,7 @@ class TodayWorkoutView(APIView):
 
 class TodayWorkoutSetCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = WorkoutSetUpdateSerializer
 
     def post(self, request):
         serializer = WorkoutSetUpdateSerializer(data=request.data)
