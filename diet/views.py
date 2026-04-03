@@ -15,6 +15,7 @@ from .serializers import (
     ProteinLogCreateSerializer,
     ProteinLogSerializer,
     ProteinOverviewSerializer,
+    SchoolLunchResponseSerializer,
     SchoolMealSelectionLogSerializer,
     SchoolMealSelectionSaveSerializer,
 )
@@ -58,6 +59,7 @@ def _get_meal_type(request):
 
 class ProteinView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = ProteinOverviewSerializer
 
     def get(self, request):
         today = timezone.localdate()
@@ -90,6 +92,7 @@ class ProteinView(APIView):
 
 class ProteinLogCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = ProteinLogCreateSerializer
 
     def post(self, request):
         serializer = ProteinLogCreateSerializer(data=request.data)
@@ -100,6 +103,7 @@ class ProteinLogCreateView(APIView):
 
 class ProteinLogDeleteView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = ProteinLogSerializer
 
     def delete(self, request, log_id):
         try:
@@ -113,6 +117,7 @@ class ProteinLogDeleteView(APIView):
 
 class MealView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = MealOverviewSerializer
 
     def get(self, request):
         target_date, error_response_obj = _get_request_date(request)
@@ -135,6 +140,7 @@ class MealView(APIView):
 
 class MealLogCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = MealLogCreateSerializer
 
     def post(self, request):
         serializer = MealLogCreateSerializer(data=request.data)
@@ -145,6 +151,7 @@ class MealLogCreateView(APIView):
 
 class MealLogDeleteView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = MealLogSerializer
 
     def delete(self, request, meal_id):
         try:
@@ -158,6 +165,7 @@ class MealLogDeleteView(APIView):
 
 class SchoolLunchView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = SchoolLunchResponseSerializer
 
     def get(self, request):
         target_date, error_response_obj = _get_request_date(request)
@@ -197,6 +205,7 @@ class SchoolLunchView(APIView):
 
 class SchoolLunchSelectionSaveView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = SchoolMealSelectionSaveSerializer
 
     def post(self, request):
         serializer = SchoolMealSelectionSaveSerializer(data=request.data)
