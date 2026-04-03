@@ -16,6 +16,7 @@ from .serializers import (
     CustomTokenObtainPairSerializer,
     DashboardSerializer,
     GrassEntrySerializer,
+    OnboardingCompleteSerializer,
     PasswordChangeSerializer,
     UserSerializer,
 )
@@ -76,6 +77,7 @@ def _build_today_workout(user, today):
 
 class SignupView(APIView):
     permission_classes = [AllowAny]
+    serializer_class = UserSerializer
 
     def post(self, request):
         serializer = UserSerializer(data=request.data)
@@ -87,6 +89,7 @@ class SignupView(APIView):
 
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
 
     def get(self, request):
         serializer = UserSerializer(request.user)
@@ -106,6 +109,7 @@ class UserProfileView(APIView):
 
 class OnboardingDraftView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
 
     def put(self, request):
         serializer = UserSerializer(request.user, data=request.data, partial=True)
@@ -116,6 +120,7 @@ class OnboardingDraftView(APIView):
 
 class OnboardingCompleteView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = OnboardingCompleteSerializer
 
     def post(self, request):
         user = request.user
@@ -126,6 +131,7 @@ class OnboardingCompleteView(APIView):
 
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = DashboardSerializer
 
     def get(self, request):
         today = timezone.localdate()
@@ -159,6 +165,7 @@ class DashboardView(APIView):
 
 class GrassView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = GrassEntrySerializer
 
     def get(self, request):
         logs = DailyLog.objects.filter(user=request.user).order_by('date')
@@ -168,6 +175,7 @@ class GrassView(APIView):
 
 class PasswordChangeView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = PasswordChangeSerializer
 
     def patch(self, request):
         serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
