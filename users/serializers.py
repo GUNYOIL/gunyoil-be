@@ -41,6 +41,10 @@ class GrassEntrySerializer(serializers.Serializer):
     is_completed = serializers.BooleanField()
 
 
+class OnboardingCompleteSerializer(serializers.Serializer):
+    onboarding_completed = serializers.BooleanField()
+
+
 class RecentWorkoutSerializer(serializers.Serializer):
     date = serializers.DateField()
     is_completed = serializers.BooleanField()
