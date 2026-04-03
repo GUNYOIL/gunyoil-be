@@ -107,6 +107,32 @@ class MealOverviewSerializer(serializers.Serializer):
     meals = MealLogSerializer(many=True)
 
 
+class SchoolMealOptionSerializer(serializers.Serializer):
+    none = serializers.DecimalField(max_digits=6, decimal_places=1)
+    small = serializers.DecimalField(max_digits=6, decimal_places=1)
+    medium = serializers.DecimalField(max_digits=6, decimal_places=1)
+    large = serializers.DecimalField(max_digits=6, decimal_places=1)
+
+
+class SchoolMealMenuSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    estimated_protein_grams = serializers.DecimalField(max_digits=6, decimal_places=1)
+    selection_options = SchoolMealOptionSerializer()
+    default_selection = serializers.CharField()
+
+
+class SchoolLunchResponseSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    school = serializers.DictField()
+    meal_type = serializers.CharField()
+    meal_type_label = serializers.CharField()
+    menus = SchoolMealMenuSerializer(many=True)
+    estimated_total_protein = serializers.DecimalField(max_digits=6, decimal_places=1)
+    school_total_protein = serializers.DecimalField(max_digits=6, decimal_places=1, allow_null=True)
+    calories = serializers.CharField(allow_null=True)
+    nutrition_info = serializers.CharField(allow_null=True)
+
+
 class SchoolMealSelectionItemSerializer(serializers.Serializer):
     menu_name = serializers.CharField(max_length=100)
     selection = serializers.ChoiceField(choices=SchoolMealSelectionLog.SelectionType.choices)
@@ -148,3 +174,11 @@ class SchoolMealSelectionLogSerializer(serializers.ModelSerializer):
             'final_protein_grams',
             'created_at',
         ]
+
+
+class SchoolMealSelectionSaveResponseSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    meal_type = serializers.CharField()
+    total_protein = serializers.DecimalField(max_digits=6, decimal_places=1)
+    protein_log_id = serializers.IntegerField()
+    items = SchoolMealSelectionLogSerializer(many=True)
