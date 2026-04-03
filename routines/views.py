@@ -9,6 +9,7 @@ from .serializers import RoutineSerializer
 
 class UserRoutineView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = RoutineSerializer
 
     def get(self, request):
         routines = Routine.objects.filter(user=request.user).order_by('day_of_week')
