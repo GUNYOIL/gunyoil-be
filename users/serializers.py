@@ -39,6 +39,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 class GrassEntrySerializer(serializers.Serializer):
     date = serializers.DateField()
     is_completed = serializers.BooleanField()
+    completion_percent = serializers.IntegerField()
 
 
 class OnboardingCompleteSerializer(serializers.Serializer):
