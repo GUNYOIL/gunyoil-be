@@ -75,6 +75,15 @@ def _build_today_workout(user, today):
     }
 
 
+def _get_completion_percent(log):
+    total_sets = log.sets.count()
+    if total_sets == 0:
+        return 100 if log.is_completed else 0
+
+    completed_sets = log.sets.filter(is_completed=True).count()
+    return int((completed_sets / total_sets) * 100)
+
+
 class SignupView(APIView):
     permission_classes = [AllowAny]
     serializer_class = UserSerializer
@@ -168,8 +177,18 @@ class GrassView(APIView):
     serializer_class = GrassEntrySerializer
 
     def get(self, request):
-        logs = DailyLog.objects.filter(user=request.user).order_by('date')
-        serializer = GrassEntrySerializer(logs, many=True)
+        logs = DailyLog.objects.filter(user=request.user).prefetch_related('sets').order_by('date')
+        serializer = GrassEntrySerializer(
+            [
+                {
+                    'date': log.date,
+                    'is_completed': log.is_completed,
+                    'completion_percent': _get_completion_percent(log),
+                }
+                for log in logs
+            ],
+            many=True,
+        )
         return success_response(serializer.data)
 
 
