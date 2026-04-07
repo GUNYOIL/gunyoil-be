@@ -7,6 +7,7 @@ from rest_framework.test import APITestCase
 
 from exercises.models import Exercise
 from routines.models import Routine, RoutineDetail
+from workouts.models import DailyLog
 
 
 User = get_user_model()
@@ -46,6 +47,16 @@ class WorkoutApiTests(APITestCase):
         self.assertTrue(response.data['success'])
         self.assertEqual(response.data['data']['weight'], 105.0)
         self.assertTrue(response.data['data']['is_completed'])
+
+    def test_get_today_workout_populates_sets_for_existing_empty_log(self):
+        DailyLog.objects.create(user=self.user, is_completed=False)
+
+        response = self.client.get(reverse('workout_today'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(len(response.data['data']['sets']), 2)
+        self.assertTrue(all(item['id'] for item in response.data['data']['sets']))
 
     def test_save_today_workout_via_put_endpoint(self):
         today_response = self.client.get(reverse('workout_today'))
