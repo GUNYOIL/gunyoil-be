@@ -11,7 +11,7 @@ class ExerciseListView(APIView):
     serializer_class = ExerciseSerializer
 
     def get(self, request):
-        queryset = Exercise.objects.all()
+        queryset = Exercise.objects.filter(is_active=True)
 
         category = request.query_params.get('category')
         if category:
