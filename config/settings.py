@@ -171,6 +171,7 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
+    'https://gunyoil.vercel.app',
 ]
 
 NEIS_API_KEY = os.getenv('NEIS_API_KEY')
