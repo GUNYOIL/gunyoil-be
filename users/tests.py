@@ -10,7 +10,7 @@ from rest_framework.test import APITestCase
 from diet.models import ProteinLog
 from exercises.models import Exercise
 from routines.models import Routine, RoutineDetail
-from workouts.models import DailyLog
+from workouts.models import DailyLog, WorkoutSet
 
 
 User = get_user_model()
@@ -81,14 +81,41 @@ class UserApiTests(APITestCase):
         self.assertEqual(len(data['recent_workouts']), 1)
 
     def test_get_grass(self):
-        self._create_daily_log(timezone.localdate() - timedelta(days=1), False)
-        self._create_daily_log(timezone.localdate(), True)
+        incomplete_log = self._create_daily_log(timezone.localdate() - timedelta(days=1), False)
+        complete_log = self._create_daily_log(timezone.localdate(), True)
+        exercise = Exercise.objects.create(name='Squat', category='LEGS', target_muscle='quads')
+        WorkoutSet.objects.create(
+            daily_log=incomplete_log,
+            exercise=exercise,
+            set_number=1,
+            weight=60,
+            reps=10,
+            is_completed=False,
+        )
+        WorkoutSet.objects.create(
+            daily_log=incomplete_log,
+            exercise=exercise,
+            set_number=2,
+            weight=60,
+            reps=10,
+            is_completed=True,
+        )
+        WorkoutSet.objects.create(
+            daily_log=complete_log,
+            exercise=exercise,
+            set_number=1,
+            weight=60,
+            reps=10,
+            is_completed=True,
+        )
 
         response = self.client.get(reverse('grass'))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['success'])
         self.assertEqual(len(response.data['data']), 2)
+        self.assertEqual(response.data['data'][0]['completion_percent'], 50)
+        self.assertEqual(response.data['data'][1]['completion_percent'], 100)
 
     def test_change_password(self):
         response = self.client.patch(
