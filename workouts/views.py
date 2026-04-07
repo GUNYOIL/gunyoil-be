@@ -17,6 +17,26 @@ from .serializers import (
 )
 
 
+def _ensure_today_workout_sets(log, user, weekday):
+    if log.sets.exists():
+        return
+
+    today_routine = Routine.objects.filter(user=user, day_of_week=weekday).prefetch_related('details__exercise').first()
+    if not today_routine:
+        return
+
+    for detail in today_routine.details.all():
+        for i in range(1, detail.target_sets + 1):
+            WorkoutSet.objects.create(
+                daily_log=log,
+                exercise=detail.exercise,
+                set_number=i,
+                weight=detail.target_weight,
+                reps=detail.target_reps,
+                is_completed=False,
+            )
+
+
 class WorkoutHistoryView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = DailyLogSerializer
@@ -41,19 +61,8 @@ class TodayWorkoutView(APIView):
             defaults={'is_completed': False},
         )
 
-        if created:
-            today_routine = Routine.objects.filter(user=request.user, day_of_week=weekday).first()
-            if today_routine:
-                for detail in today_routine.details.all():
-                    for i in range(1, detail.target_sets + 1):
-                        WorkoutSet.objects.create(
-                            daily_log=log,
-                            exercise=detail.exercise,
-                            set_number=i,
-                            weight=detail.target_weight,
-                            reps=detail.target_reps,
-                            is_completed=False,
-                        )
+        if created or not log.sets.exists():
+            _ensure_today_workout_sets(log, request.user, weekday)
 
         return success_response(TodayLogSerializer(log).data)
 
