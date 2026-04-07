@@ -66,4 +66,6 @@ EXERCISE_CATALOG = [
     {'code': 'cycle', 'name': '사이클', 'category': 'CARDIO', 'target_muscle': '유산소'},
     {'code': 'elliptical', 'name': '일립티컬', 'category': 'CARDIO', 'target_muscle': '유산소'},
     {'code': 'rowing_machine', 'name': '로잉 머신', 'category': 'CARDIO', 'target_muscle': '유산소'},
+    {'code': 'stability_training', 'name': '안정화 트레이닝', 'category': 'CARDIO', 'target_muscle': '퍼포먼스'},
+    {'code': 'coordination_training', 'name': '협응력 트레이닝', 'category': 'CARDIO', 'target_muscle': '퍼포먼스'},
 ]
