@@ -207,3 +207,179 @@ class PasswordChangeView(APIView):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+from users.models import Announcement, Inquiry
+from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiResponse
+from rest_framework import serializers
+
+class AdminLoginView(APIView):
+    permission_classes = [AllowAny]
+    
+    @extend_schema(
+        summary="어드민 로그인",
+        description="고정된 어드민 계정(admin)으로 로그인하여 토큰을 발급받습니다.",
+        request=inline_serializer(
+            name='AdminLoginRequest',
+            fields={
+                'username': serializers.CharField(),
+                'password': serializers.CharField(),
+            }
+        ),
+        responses={200: inline_serializer(
+            name='AdminLoginResponse',
+            fields={
+                'access': serializers.CharField(),
+                'refresh': serializers.CharField(),
+            }
+        )}
+    )
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        if username == 'admin' and password == 'iamhelchang':
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            admin_user, created = User.objects.get_or_create(email='admin@gunyoil.com')
+            if created:
+                admin_user.set_password('iamhelchang')
+                admin_user.is_staff = True
+                admin_user.is_superuser = True
+                admin_user.save()
+            from rest_framework_simplejwt.tokens import RefreshToken
+            refresh = RefreshToken.for_user(admin_user)
+            return success_response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            }, '어드민 로그인 성공')
+        return error_response('Invalid credentials', status_code=status.HTTP_401_UNAUTHORIZED)
+
+class AnnouncementListView(APIView):
+    permission_classes = [AllowAny]
+    
+    @extend_schema(
+        summary="공지사항 전체 조회",
+        description="등록된 모든 공지사항을 불러옵니다.",
+        responses={200: inline_serializer(
+            name='AnnouncementListResponse',
+            fields={
+                'id': serializers.IntegerField(),
+                'title': serializers.CharField(),
+                'content': serializers.CharField(),
+                'created_at': serializers.DateTimeField(),
+            },
+            many=True
+        )}
+    )
+    def get(self, request):
+        announcements = Announcement.objects.all()
+        data = [{'id': a.id, 'title': a.title, 'content': a.content, 'created_at': a.created_at} for a in announcements]
+        return success_response(data)
+
+class AdminAnnouncementView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary="공지사항 등록 (어드민)",
+        request=inline_serializer(
+            name='CreateAnnouncementRequest',
+            fields={
+                'title': serializers.CharField(),
+                'content': serializers.CharField(),
+            }
+        )
+    )
+    def post(self, request):
+        title = request.data.get('title')
+        content = request.data.get('content')
+        if title and content:
+            a = Announcement.objects.create(title=title, content=content)
+            return success_response({'id': a.id}, '공지가 작성되었습니다.')
+        return error_response('입력값이 부족합니다.')
+        
+class AdminAnnouncementDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(summary="공지사항 삭제 (어드민)")
+    def delete(self, request, pk):
+        Announcement.objects.filter(id=pk).delete()
+        return success_response(None, '삭제되었습니다.')
+
+class InquiryView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary="문의사항 접수 (사용자)",
+        request=inline_serializer(
+            name='CreateInquiryRequest',
+            fields={
+                'title': serializers.CharField(),
+                'content': serializers.CharField(),
+                'email': serializers.EmailField(),
+            }
+        )
+    )
+    def post(self, request):
+        title = request.data.get('title')
+        content = request.data.get('content')
+        reply_email = request.data.get('email') # 프론트에서 넘어올 필드명에 맞춤 (답변 이메일)
+        
+        if title and content:
+            i = Inquiry.objects.create(
+                user=request.user, 
+                title=title,
+                content=content,
+                reply_email=reply_email
+            )
+            return success_response({'id': i.id}, '문의가 접수되었습니다.')
+        return error_response('제목과 내용을 입력하세요.')
+
+class AdminInquiryView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary="모든 사용자 문의내역 조회 (어드민)",
+        responses={200: inline_serializer(
+            name='AdminInquiryListResponse',
+            fields={
+                'id': serializers.IntegerField(),
+                'user_email': serializers.EmailField(),
+                'reply_email': serializers.EmailField(),
+                'title': serializers.CharField(),
+                'content': serializers.CharField(),
+                'status': serializers.CharField(),
+                'created_at': serializers.DateTimeField(),
+            },
+            many=True
+        )}
+    )
+    def get(self, request):
+        inquiries = Inquiry.objects.all().select_related('user')
+        data = [{
+            'id': i.id,
+            'user_email': i.user.email,
+            'reply_email': i.reply_email,
+            'title': i.title,
+            'content': i.content,
+            'status': i.status,
+            'created_at': i.created_at
+        } for i in inquiries]
+        return success_response(data)
+
+class AdminInquiryDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        summary="문의사항 답변/해결 상태 변경 (어드민)",
+        request=inline_serializer(
+            name='UpdateInquiryStatusRequest',
+            fields={
+                'status': serializers.CharField(),
+            }
+        )
+    )
+    def patch(self, request, pk):
+        status_val = request.data.get('status')
+        if status_val in ['PENDING', 'RESOLVED']:
+            Inquiry.objects.filter(id=pk).update(status=status_val)
+            return success_response(None, '상태가 변경되었습니다.')
+        return error_response('잘못된 상태값입니다.')

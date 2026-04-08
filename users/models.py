@@ -41,3 +41,32 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+class Announcement(models.Model):
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+class Inquiry(models.Model):
+    STATUS_CHOICES = (
+        ('PENDING', '대기중'),
+        ('RESOLVED', '답변완료'),
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='inquiries')
+    title = models.CharField(max_length=255, default='제목 없음')
+    reply_email = models.EmailField(null=True, blank=True)
+    content = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.get_status_display()}] {self.title}"

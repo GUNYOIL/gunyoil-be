@@ -10,6 +10,13 @@ from .views import (
     PasswordChangeView,
     SignupView,
     UserProfileView,
+    AdminLoginView,
+    AnnouncementListView,
+    AdminAnnouncementView,
+    AdminAnnouncementDetailView,
+    InquiryView,
+    AdminInquiryView,
+    AdminInquiryDetailView,
 )
 
 
@@ -24,4 +31,12 @@ urlpatterns = [
     path('me/password/', PasswordChangeView.as_view(), name='password_change'),
     path('me/onboarding/draft/', OnboardingDraftView.as_view(), name='onboarding_draft'),
     path('me/onboarding/complete/', OnboardingCompleteView.as_view(), name='onboarding_complete'),
+    
+    path('auth/admin/login/', AdminLoginView.as_view(), name='admin_login'),
+    path('announcements/', AnnouncementListView.as_view(), name='announcements'),
+    path('admin/announcements/', AdminAnnouncementView.as_view(), name='admin_announcements'),
+    path('admin/announcements/<int:pk>/', AdminAnnouncementDetailView.as_view(), name='admin_announcements_detail'),
+    path('me/inquiries/', InquiryView.as_view(), name='me_inquiries'),
+    path('admin/inquiries/', AdminInquiryView.as_view(), name='admin_inquiries'),
+    path('admin/inquiries/<int:pk>/', AdminInquiryDetailView.as_view(), name='admin_inquiries_detail'),
 ]

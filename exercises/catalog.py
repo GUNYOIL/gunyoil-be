@@ -68,4 +68,6 @@ EXERCISE_CATALOG = [
     {'code': 'rowing_machine', 'name': '로잉 머신', 'category': 'CARDIO', 'target_muscle': '유산소'},
     {'code': 'stability_training', 'name': '안정화 트레이닝', 'category': 'CARDIO', 'target_muscle': '퍼포먼스'},
     {'code': 'coordination_training', 'name': '협응력 트레이닝', 'category': 'CARDIO', 'target_muscle': '퍼포먼스'},
+    {'code': 'lying_triceps_extension', 'name': '라잉 트라이셉스 익스텐션', 'category': 'ARMS', 'target_muscle': '삼두근'},
+    {'code': 'cable_arm_pulldown', 'name': '케이블 암풀다운', 'category': 'BACK', 'target_muscle': '광배근'},
 ]
