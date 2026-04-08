@@ -286,7 +286,11 @@ class AdminAnnouncementView(APIView):
                 'title': serializers.CharField(),
                 'content': serializers.CharField(),
             }
-        )
+        ),
+        responses={200: inline_serializer(
+            name='CreateAnnouncementResponse', 
+            fields={'id': serializers.IntegerField()}
+        )}
     )
     def post(self, request):
         title = request.data.get('title')
@@ -299,7 +303,10 @@ class AdminAnnouncementView(APIView):
 class AdminAnnouncementDetailView(APIView):
     permission_classes = [IsAuthenticated]
     
-    @extend_schema(summary="공지사항 삭제 (어드민)")
+    @extend_schema(
+        summary="공지사항 삭제 (어드민)",
+        responses={200: OpenApiResponse(description="삭제 완료")}
+    )
     def delete(self, request, pk):
         Announcement.objects.filter(id=pk).delete()
         return success_response(None, '삭제되었습니다.')
@@ -316,7 +323,11 @@ class InquiryView(APIView):
                 'content': serializers.CharField(),
                 'email': serializers.EmailField(),
             }
-        )
+        ),
+        responses={200: inline_serializer(
+            name='CreateInquiryResponse',
+            fields={'id': serializers.IntegerField()}
+        )}
     )
     def post(self, request):
         title = request.data.get('title')
@@ -375,7 +386,8 @@ class AdminInquiryDetailView(APIView):
             fields={
                 'status': serializers.CharField(),
             }
-        )
+        ),
+        responses={200: OpenApiResponse(description="상태 변경 완료")}
     )
     def patch(self, request, pk):
         status_val = request.data.get('status')

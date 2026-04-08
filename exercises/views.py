@@ -43,7 +43,11 @@ class AdminExerciseView(APIView):
                 'category': serializers.CharField(),
                 'target_muscle': serializers.CharField(),
             }
-        )
+        ),
+        responses={200: inline_serializer(
+            name='CreateExerciseResponse',
+            fields={'id': serializers.IntegerField()}
+        )}
     )
     def post(self, request):
         code = request.data.get('code')
