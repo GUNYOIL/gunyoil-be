@@ -10,8 +10,8 @@ from rest_framework.test import APITestCase
 from diet.models import ProteinLog
 from exercises.models import Exercise
 from routines.models import Routine, RoutineDetail
+from users.models import Announcement, Inquiry
 from workouts.models import DailyLog, WorkoutSet
-from users.models import Inquiry
 
 
 User = get_user_model()
@@ -158,3 +158,48 @@ class UserApiTests(APITestCase):
         self.assertTrue(response.data['success'])
         inquiry.refresh_from_db()
         self.assertEqual(inquiry.status, 'RESOLVED')
+
+    def test_announcements_returns_latest_one_when_none_selected(self):
+        Announcement.objects.create(title='첫 공지', content='old')
+        latest = Announcement.objects.create(title='최신 공지', content='new')
+
+        response = self.client.get('/announcements')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['id'], latest.id)
+        self.assertFalse(response.data['data'][0]['is_selected_for_users'])
+
+    def test_announcements_returns_selected_one_when_present(self):
+        Announcement.objects.create(title='최신 공지', content='new')
+        selected = Announcement.objects.create(
+            title='선택 공지',
+            content='selected',
+            is_selected_for_users=True,
+        )
+
+        response = self.client.get('/announcements')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['id'], selected.id)
+        self.assertTrue(response.data['data'][0]['is_selected_for_users'])
+
+    def test_patch_admin_announcement_selects_only_one(self):
+        first = Announcement.objects.create(title='첫 공지', content='first', is_selected_for_users=True)
+        second = Announcement.objects.create(title='둘째 공지', content='second')
+
+        response = self.client.patch(
+            f'/admin/announcements/{second.id}',
+            {'is_selected_for_users': True},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertFalse(first.is_selected_for_users)
+        self.assertTrue(second.is_selected_for_users)
