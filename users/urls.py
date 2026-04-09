@@ -32,11 +32,18 @@ urlpatterns = [
     path('me/onboarding/draft/', OnboardingDraftView.as_view(), name='onboarding_draft'),
     path('me/onboarding/complete/', OnboardingCompleteView.as_view(), name='onboarding_complete'),
     
+    path('auth/admin/login', AdminLoginView.as_view(), name='admin_login_no_slash'),
     path('auth/admin/login/', AdminLoginView.as_view(), name='admin_login'),
+    path('announcements', AnnouncementListView.as_view(), name='announcements_no_slash'),
     path('announcements/', AnnouncementListView.as_view(), name='announcements'),
+    path('admin/announcements', AdminAnnouncementView.as_view(), name='admin_announcements_no_slash'),
     path('admin/announcements/', AdminAnnouncementView.as_view(), name='admin_announcements'),
+    path('admin/announcements/<int:pk>', AdminAnnouncementDetailView.as_view(), name='admin_announcements_detail_no_slash'),
     path('admin/announcements/<int:pk>/', AdminAnnouncementDetailView.as_view(), name='admin_announcements_detail'),
+    path('me/inquiries', InquiryView.as_view(), name='me_inquiries_no_slash'),
     path('me/inquiries/', InquiryView.as_view(), name='me_inquiries'),
+    path('admin/inquiries', AdminInquiryView.as_view(), name='admin_inquiries_no_slash'),
     path('admin/inquiries/', AdminInquiryView.as_view(), name='admin_inquiries'),
+    path('admin/inquiries/<int:pk>', AdminInquiryDetailView.as_view(), name='admin_inquiries_detail_no_slash'),
     path('admin/inquiries/<int:pk>/', AdminInquiryDetailView.as_view(), name='admin_inquiries_detail'),
 ]
