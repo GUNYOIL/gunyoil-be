@@ -45,10 +45,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Announcement(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
+    is_selected_for_users = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-created_at', '-id']
 
     def __str__(self):
         return self.title
