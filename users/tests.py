@@ -85,6 +85,19 @@ class UserApiTests(APITestCase):
         incomplete_log = self._create_daily_log(timezone.localdate() - timedelta(days=1), False)
         complete_log = self._create_daily_log(timezone.localdate(), True)
         exercise = Exercise.objects.create(name='Squat', category='LEGS', target_muscle='quads')
+        for weekday in {
+            timezone.localdate().weekday(),
+            (timezone.localdate() - timedelta(days=1)).weekday(),
+        }:
+            routine = Routine.objects.create(user=self.user, day_of_week=weekday)
+            RoutineDetail.objects.create(
+                routine=routine,
+                exercise=exercise,
+                target_weight=60,
+                target_reps=10,
+                target_sets=2,
+                order=1,
+            )
         WorkoutSet.objects.create(
             daily_log=incomplete_log,
             exercise=exercise,
@@ -114,9 +127,19 @@ class UserApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['success'])
-        self.assertEqual(len(response.data['data']), 2)
-        self.assertEqual(response.data['data'][0]['completion_percent'], 50)
-        self.assertEqual(response.data['data'][1]['completion_percent'], 100)
+        self.assertEqual(len(response.data['data']), 365)
+
+        data_by_date = {entry['date']: entry for entry in response.data['data']}
+        yesterday = str(timezone.localdate() - timedelta(days=1))
+        today = str(timezone.localdate())
+        two_days_ago = str(timezone.localdate() - timedelta(days=2))
+
+        self.assertEqual(data_by_date[yesterday]['completion_percent'], 50)
+        self.assertFalse(data_by_date[yesterday]['is_rest_day'])
+        self.assertEqual(data_by_date[today]['completion_percent'], 100)
+        self.assertFalse(data_by_date[today]['is_rest_day'])
+        self.assertTrue(data_by_date[two_days_ago]['is_rest_day'])
+        self.assertEqual(data_by_date[two_days_ago]['completion_percent'], 0)
 
     def test_change_password(self):
         response = self.client.patch(
