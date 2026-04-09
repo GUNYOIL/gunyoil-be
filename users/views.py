@@ -377,6 +377,36 @@ class InquiryView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        summary='내 문의 목록 조회 (사용자)',
+        responses={200: inline_serializer(
+            name='UserInquiryListResponse',
+            fields={
+                'id': serializers.IntegerField(),
+                'title': serializers.CharField(),
+                'content': serializers.CharField(),
+                'reply_email': serializers.EmailField(allow_null=True),
+                'status': serializers.CharField(),
+                'created_at': serializers.DateTimeField(),
+            },
+            many=True,
+        )},
+    )
+    def get(self, request):
+        inquiries = Inquiry.objects.filter(user=request.user).order_by('-created_at', '-id')
+        data = [
+            {
+                'id': inquiry.id,
+                'title': inquiry.title,
+                'content': inquiry.content,
+                'reply_email': inquiry.reply_email,
+                'status': inquiry.status,
+                'created_at': inquiry.created_at,
+            }
+            for inquiry in inquiries
+        ]
+        return success_response(data)
+
+    @extend_schema(
         summary='문의사항 접수 (사용자)',
         request=inline_serializer(
             name='CreateInquiryRequest',
