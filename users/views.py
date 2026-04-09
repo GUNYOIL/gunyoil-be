@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.utils import timezone
@@ -84,6 +85,15 @@ def _get_completion_percent(log):
 
     completed_sets = log.sets.filter(is_completed=True).count()
     return int((completed_sets / total_sets) * 100)
+
+
+def _get_active_routine_weekdays(user):
+    routines = Routine.objects.filter(user=user).prefetch_related('details')
+    return {
+        routine.day_of_week
+        for routine in routines
+        if routine.details.exists()
+    }
 
 
 class SignupView(APIView):
@@ -179,15 +189,25 @@ class GrassView(APIView):
     serializer_class = GrassEntrySerializer
 
     def get(self, request):
-        logs = DailyLog.objects.filter(user=request.user).prefetch_related('sets').order_by('date')
+        today = timezone.localdate()
+        start_date = today - timedelta(days=364)
+        logs = DailyLog.objects.filter(
+            user=request.user,
+            date__gte=start_date,
+            date__lte=today,
+        ).prefetch_related('sets')
+        logs_by_date = {log.date: log for log in logs}
+        active_weekdays = _get_active_routine_weekdays(request.user)
+
         serializer = GrassEntrySerializer(
             [
                 {
-                    'date': log.date,
-                    'is_completed': log.is_completed,
-                    'completion_percent': _get_completion_percent(log),
+                    'date': date,
+                    'is_completed': logs_by_date[date].is_completed if date in logs_by_date else False,
+                    'completion_percent': _get_completion_percent(logs_by_date[date]) if date in logs_by_date else 0,
+                    'is_rest_day': date.weekday() not in active_weekdays,
                 }
-                for log in logs
+                for date in (start_date + timedelta(days=offset) for offset in range(365))
             ],
             many=True,
         )
