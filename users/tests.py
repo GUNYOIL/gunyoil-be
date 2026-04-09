@@ -159,6 +159,31 @@ class UserApiTests(APITestCase):
         inquiry.refresh_from_db()
         self.assertEqual(inquiry.status, 'RESOLVED')
 
+    def test_get_my_inquiries_returns_only_current_user_items(self):
+        Inquiry.objects.create(
+            user=self.user,
+            title='내 문의',
+            content='내 내용',
+            reply_email='user@example.com',
+            status='PENDING',
+        )
+        other_user = User.objects.create_user(email='other@example.com', password='password123')
+        Inquiry.objects.create(
+            user=other_user,
+            title='남의 문의',
+            content='남의 내용',
+            reply_email='other@example.com',
+            status='RESOLVED',
+        )
+
+        response = self.client.get('/me/inquiries/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(len(response.data['data']), 1)
+        self.assertEqual(response.data['data'][0]['title'], '내 문의')
+        self.assertEqual(response.data['data'][0]['status'], 'PENDING')
+
     def test_announcements_returns_latest_one_when_none_selected(self):
         Announcement.objects.create(title='첫 공지', content='old')
         latest = Announcement.objects.create(title='최신 공지', content='new')
