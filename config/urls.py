@@ -41,14 +41,14 @@ def admin_frontend_view(request, path=""):
     return HttpResponse("Not Found", status=404)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('', include('users.urls')),
     path('catalog/', include('exercises.urls')),
     path('me/', include('routines.urls')),
     path('me/', include('diet.urls')),
     path('me/workouts/', include('workouts.urls')),
+    path('schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     re_path(r'^admin-panel/(?P<path>.*)$', admin_frontend_view),
     path('admin-panel/', admin_frontend_view),
+    path('admin/', admin.site.urls),
 ]
