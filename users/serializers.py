@@ -40,6 +40,7 @@ class GrassEntrySerializer(serializers.Serializer):
     date = serializers.DateField()
     is_completed = serializers.BooleanField()
     completion_percent = serializers.IntegerField()
+    is_rest_day = serializers.BooleanField()
 
 
 class OnboardingCompleteSerializer(serializers.Serializer):
