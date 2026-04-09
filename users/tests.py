@@ -11,6 +11,7 @@ from diet.models import ProteinLog
 from exercises.models import Exercise
 from routines.models import Routine, RoutineDetail
 from workouts.models import DailyLog, WorkoutSet
+from users.models import Inquiry
 
 
 User = get_user_model()
@@ -138,3 +139,22 @@ class UserApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['success'])
         self.assertFalse(User.objects.filter(id=self.user.id).exists())
+
+    def test_patch_admin_inquiry_without_trailing_slash(self):
+        inquiry = Inquiry.objects.create(
+            user=self.user,
+            title='문의',
+            content='내용',
+            reply_email='user@example.com',
+        )
+
+        response = self.client.patch(
+            f'/admin/inquiries/{inquiry.id}',
+            {'status': 'RESOLVED'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        inquiry.refresh_from_db()
+        self.assertEqual(inquiry.status, 'RESOLVED')
