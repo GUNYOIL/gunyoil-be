@@ -73,3 +73,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'access': data['access'],
             'refresh': data['refresh'],
         }
+
+
+class PushTokenSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    device_type = serializers.ChoiceField(choices=['web'], default='web', required=False)
