@@ -9,6 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from .models import MealLog, ProteinLog, SchoolMealSelectionLog
+from .services import _estimate_menu_protein_grams
 
 
 User = get_user_model()
@@ -275,3 +276,8 @@ class MealApiTests(APITestCase):
         self.assertEqual(SchoolMealSelectionLog.objects.first().menu_name, '새메뉴')
         self.assertEqual(ProteinLog.objects.filter(note='school-lunch:breakfast').count(), 1)
         self.assertEqual(ProteinLog.objects.get(note='school-lunch:breakfast').amount, Decimal('12.0'))
+class SchoolMealKeywordTests(APITestCase):
+    def test_estimate_menu_protein_for_rice_combo_menus(self):
+        self.assertEqual(_estimate_menu_protein_grams('치밥'), 12.0)
+        self.assertEqual(_estimate_menu_protein_grams('치킨마요덮밥'), 12.0)
+        self.assertEqual(_estimate_menu_protein_grams('제육덮밥'), 11.0)
