@@ -8,6 +8,7 @@ from .views import (
     OnboardingCompleteView,
     OnboardingDraftView,
     PasswordChangeView,
+    PushNotificationTestView,
     PushTokenView,
     SignupView,
     UserProfileView,
@@ -32,6 +33,8 @@ urlpatterns = [
     path('me/password/', PasswordChangeView.as_view(), name='password_change'),
     path('me/push-tokens', PushTokenView.as_view(), name='push_tokens_no_slash'),
     path('me/push-tokens/', PushTokenView.as_view(), name='push_tokens'),
+    path('me/push-tokens/test', PushNotificationTestView.as_view(), name='push_tokens_test_no_slash'),
+    path('me/push-tokens/test/', PushNotificationTestView.as_view(), name='push_tokens_test'),
     path('me/onboarding/draft/', OnboardingDraftView.as_view(), name='onboarding_draft'),
     path('me/onboarding/complete/', OnboardingCompleteView.as_view(), name='onboarding_complete'),
     

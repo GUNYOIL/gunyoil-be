@@ -15,6 +15,7 @@ from users.models import Announcement, Inquiry
 from workouts.models import DailyLog
 from workouts.serializers import DailyLogSerializer, TodayLogSerializer
 
+from .push_notifications import send_push_notification
 from .serializers import (
     CustomTokenObtainPairSerializer,
     DashboardSerializer,
@@ -22,6 +23,7 @@ from .serializers import (
     OnboardingCompleteSerializer,
     PasswordChangeSerializer,
     PushTokenSerializer,
+    TestPushNotificationSerializer,
     UserSerializer,
 )
 
@@ -281,6 +283,48 @@ class PushTokenView(APIView):
             return error_response('Push token not found.', status_code=status.HTTP_404_NOT_FOUND)
 
         return success_response(None, '푸시 토큰이 비활성화되었습니다.')
+
+
+class PushNotificationTestView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = TestPushNotificationSerializer
+
+    @extend_schema(
+        summary='?몄떆 ?뚯넚 ?뚯뒪??',
+        request=TestPushNotificationSerializer,
+        responses={200: inline_serializer(
+            name='PushNotificationTestResponse',
+            fields={
+                'token': serializers.CharField(),
+                'message_id': serializers.CharField(),
+            },
+        )},
+    )
+    def post(self, request):
+        serializer = TestPushNotificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token = serializer.validated_data.get('token')
+        if not token:
+            push_token = request.user.push_tokens.filter(is_active=True).order_by('-updated_at', '-id').first()
+            if not push_token:
+                return error_response('Active push token not found.', status_code=status.HTTP_404_NOT_FOUND)
+            token = push_token.token
+
+        message_id = send_push_notification(
+            token=token,
+            title=serializer.validated_data['title'],
+            body=serializer.validated_data['body'],
+            data={'type': 'test'},
+        )
+
+        return success_response(
+            {
+                'token': token,
+                'message_id': message_id,
+            },
+            '?몄떆 ?뚯넚 ?뚯뒪?몄뿉 ?깃났?덉뒿?덈떎.',
+        )
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
