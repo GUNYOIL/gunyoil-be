@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -212,6 +213,36 @@ class UserApiTests(APITestCase):
         self.assertTrue(response.data['success'])
         push_token.refresh_from_db()
         self.assertFalse(push_token.is_active)
+
+    @patch('users.views.send_push_notification', return_value='projects/gunyoil/messages/test-message-id')
+    def test_send_test_push_notification_with_saved_token(self, mocked_send):
+        UserPushToken.objects.create(user=self.user, token='web-token-1', device_type='web', is_active=True)
+
+        response = self.client.post(
+            '/me/push-tokens/test/',
+            {
+                'title': '테스트 제목',
+                'body': '테스트 본문',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['data']['token'], 'web-token-1')
+        self.assertEqual(response.data['data']['message_id'], 'projects/gunyoil/messages/test-message-id')
+        mocked_send.assert_called_once_with(
+            token='web-token-1',
+            title='테스트 제목',
+            body='테스트 본문',
+            data={'type': 'test'},
+        )
+
+    def test_send_test_push_notification_without_saved_token_returns_404(self):
+        response = self.client.post('/me/push-tokens/test/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(response.data['success'])
 
     def test_get_my_inquiries_returns_only_current_user_items(self):
         Inquiry.objects.create(
