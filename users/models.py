@@ -71,3 +71,21 @@ class Inquiry(models.Model):
 
     def __str__(self):
         return f"[{self.get_status_display()}] {self.title}"
+
+
+class UserPushToken(models.Model):
+    class DeviceType(models.TextChoices):
+        WEB = 'web', 'Web'
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='push_tokens')
+    token = models.TextField(unique=True)
+    device_type = models.CharField(max_length=20, choices=DeviceType.choices, default=DeviceType.WEB)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at', '-id']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.device_type}"
