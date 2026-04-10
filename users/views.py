@@ -21,6 +21,7 @@ from .serializers import (
     GrassEntrySerializer,
     OnboardingCompleteSerializer,
     PasswordChangeSerializer,
+    PushTokenSerializer,
     UserSerializer,
 )
 
@@ -225,6 +226,61 @@ class PasswordChangeView(APIView):
         request.user.set_password(serializer.validated_data['new_password'])
         request.user.save()
         return success_response(None, '비밀번호가 변경되었습니다.')
+
+
+class PushTokenView(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PushTokenSerializer
+
+    @extend_schema(
+        summary='푸시 토큰 등록',
+        request=PushTokenSerializer,
+        responses={200: inline_serializer(
+            name='PushTokenResponse',
+            fields={
+                'id': serializers.IntegerField(),
+                'token': serializers.CharField(),
+                'device_type': serializers.CharField(),
+                'is_active': serializers.BooleanField(),
+            },
+        )},
+    )
+    def post(self, request):
+        serializer = PushTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        push_token, _ = request.user.push_tokens.update_or_create(
+            token=serializer.validated_data['token'],
+            defaults={
+                'device_type': serializer.validated_data.get('device_type', 'web'),
+                'is_active': True,
+            },
+        )
+
+        return success_response(
+            {
+                'id': push_token.id,
+                'token': push_token.token,
+                'device_type': push_token.device_type,
+                'is_active': push_token.is_active,
+            },
+            '푸시 토큰이 등록되었습니다.',
+        )
+
+    @extend_schema(
+        summary='푸시 토큰 삭제',
+        request=PushTokenSerializer,
+        responses={200: OpenApiResponse(description='토큰 삭제 완료')},
+    )
+    def delete(self, request):
+        serializer = PushTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        updated = request.user.push_tokens.filter(token=serializer.validated_data['token']).update(is_active=False)
+        if not updated:
+            return error_response('Push token not found.', status_code=status.HTTP_404_NOT_FOUND)
+
+        return success_response(None, '푸시 토큰이 비활성화되었습니다.')
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
