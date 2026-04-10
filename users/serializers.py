@@ -78,3 +78,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class PushTokenSerializer(serializers.Serializer):
     token = serializers.CharField()
     device_type = serializers.ChoiceField(choices=['web'], default='web', required=False)
+
+
+class TestPushNotificationSerializer(serializers.Serializer):
+    title = serializers.CharField(required=False, default='근요일 테스트 알림')
+    body = serializers.CharField(required=False, default='푸시 알림 테스트가 정상적으로 도착했습니다.')
+    token = serializers.CharField(required=False, allow_blank=False)
