@@ -10,7 +10,7 @@ from rest_framework.test import APITestCase
 from diet.models import ProteinLog
 from exercises.models import Exercise
 from routines.models import Routine, RoutineDetail
-from users.models import Announcement, Inquiry
+from users.models import Announcement, Inquiry, UserPushToken
 from workouts.models import DailyLog, WorkoutSet
 
 
@@ -181,6 +181,37 @@ class UserApiTests(APITestCase):
         self.assertTrue(response.data['success'])
         inquiry.refresh_from_db()
         self.assertEqual(inquiry.status, 'RESOLVED')
+
+    def test_register_push_token(self):
+        response = self.client.post(
+            '/me/push-tokens/',
+            {
+                'token': 'web-token-1',
+                'device_type': 'web',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(UserPushToken.objects.filter(user=self.user, token='web-token-1', is_active=True).count(), 1)
+
+    def test_delete_push_token_marks_token_inactive(self):
+        push_token = UserPushToken.objects.create(user=self.user, token='web-token-1', device_type='web', is_active=True)
+
+        response = self.client.delete(
+            '/me/push-tokens/',
+            {
+                'token': push_token.token,
+                'device_type': 'web',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        push_token.refresh_from_db()
+        self.assertFalse(push_token.is_active)
 
     def test_get_my_inquiries_returns_only_current_user_items(self):
         Inquiry.objects.create(
