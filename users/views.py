@@ -15,8 +15,13 @@ from users.models import Announcement, Inquiry
 from workouts.models import DailyLog
 from workouts.serializers import DailyLogSerializer, TodayLogSerializer
 
-from .push_notifications import send_push_notification
-from .push_notifications import send_lunch_reminders
+from .push_notifications import (
+    send_push_notification,
+    send_lunch_reminders,
+    send_breakfast_reminders,
+    send_dinner_reminders,
+    send_exercise_reminders,
+)
 from .serializers import (
     CustomTokenObtainPairSerializer,
     DashboardSerializer,
@@ -25,6 +30,9 @@ from .serializers import (
     PasswordChangeSerializer,
     PushTokenSerializer,
     RunLunchReminderSerializer,
+    RunBreakfastReminderSerializer,
+    RunDinnerReminderSerializer,
+    RunExerciseReminderSerializer,
     TestPushNotificationSerializer,
     UserSerializer,
 )
@@ -352,6 +360,82 @@ class AdminLunchReminderRunView(APIView):
 
         summary = send_lunch_reminders(target_date=serializer.validated_data.get('date'))
         return success_response(summary, '점심 푸시 알림 실행이 완료되었습니다.')
+
+
+class AdminBreakfastReminderRunView(APIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = RunBreakfastReminderSerializer
+
+    @extend_schema(
+        summary='아침 푸시 알림 수동 실행',
+        request=RunBreakfastReminderSerializer,
+        responses={200: inline_serializer(
+            name='AdminBreakfastReminderRunResponse',
+            fields={
+                'date': serializers.DateField(),
+                'target_count': serializers.IntegerField(),
+                'success_count': serializers.IntegerField(),
+                'failure_count': serializers.IntegerField(),
+            },
+        )},
+    )
+    def post(self, request):
+        serializer = RunBreakfastReminderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        summary = send_breakfast_reminders(target_date=serializer.validated_data.get('date'))
+        return success_response(summary, '아침 푸시 알림 실행이 완료되었습니다.')
+
+
+class AdminDinnerReminderRunView(APIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = RunDinnerReminderSerializer
+
+    @extend_schema(
+        summary='저녁 푸시 알림 수동 실행',
+        request=RunDinnerReminderSerializer,
+        responses={200: inline_serializer(
+            name='AdminDinnerReminderRunResponse',
+            fields={
+                'date': serializers.DateField(),
+                'target_count': serializers.IntegerField(),
+                'success_count': serializers.IntegerField(),
+                'failure_count': serializers.IntegerField(),
+            },
+        )},
+    )
+    def post(self, request):
+        serializer = RunDinnerReminderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        summary = send_dinner_reminders(target_date=serializer.validated_data.get('date'))
+        return success_response(summary, '저녁 푸시 알림 실행이 완료되었습니다.')
+
+
+class AdminExerciseReminderRunView(APIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = RunExerciseReminderSerializer
+
+    @extend_schema(
+        summary='운동 푸시 알림 수동 실행',
+        request=RunExerciseReminderSerializer,
+        responses={200: inline_serializer(
+            name='AdminExerciseReminderRunResponse',
+            fields={
+                'date': serializers.DateField(),
+                'target_count': serializers.IntegerField(),
+                'success_count': serializers.IntegerField(),
+                'failure_count': serializers.IntegerField(),
+            },
+        )},
+    )
+    def post(self, request):
+        serializer = RunExerciseReminderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        summary = send_exercise_reminders(target_date=serializer.validated_data.get('date'))
+        return success_response(summary, '운동 푸시 알림 실행이 완료되었습니다.')
+
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
