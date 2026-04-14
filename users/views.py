@@ -245,6 +245,36 @@ class PushTokenView(APIView):
     serializer_class = PushTokenSerializer
 
     @extend_schema(
+        summary='푸시 토큰 목록 조회',
+        responses={200: inline_serializer(
+            name='PushTokenListResponse',
+            fields={
+                'id': serializers.IntegerField(),
+                'token': serializers.CharField(),
+                'device_type': serializers.CharField(),
+                'is_active': serializers.BooleanField(),
+                'created_at': serializers.DateTimeField(),
+                'updated_at': serializers.DateTimeField(),
+            },
+            many=True,
+        )},
+    )
+    def get(self, request):
+        tokens = request.user.push_tokens.all().order_by('-updated_at', '-id')
+        data = [
+            {
+                'id': t.id,
+                'token': t.token,
+                'device_type': t.device_type,
+                'is_active': t.is_active,
+                'created_at': t.created_at,
+                'updated_at': t.updated_at,
+            }
+            for t in tokens
+        ]
+        return success_response(data)
+
+    @extend_schema(
         summary='푸시 토큰 등록',
         request=PushTokenSerializer,
         responses={200: inline_serializer(
