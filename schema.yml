@@ -1,0 +1,1316 @@
+openapi: 3.0.3
+info:
+  title: Gunyoil API
+  version: 1.0.0
+  description: Gunyoil backend API documentation
+paths:
+  /auth/login/:
+    post:
+      operationId: auth_login_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPair'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPair'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPair'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomTokenObtainPair'
+          description: ''
+  /auth/logout/:
+    post:
+      operationId: auth_logout_create
+      description: |-
+        Takes a token and blacklists it. Must be used with the
+        `rest_framework_simplejwt.token_blacklist` app installed.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklist'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklist'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenBlacklist'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenBlacklist'
+          description: ''
+  /auth/signup/:
+    post:
+      operationId: auth_signup_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /catalog/exercises/:
+    get:
+      operationId: catalog_exercises_retrieve
+      tags:
+      - catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+          description: ''
+  /me/:
+    get:
+      operationId: me_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: me_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: me_destroy
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /me/dashboard/:
+    get:
+      operationId: me_dashboard_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+          description: ''
+  /me/grass/:
+    get:
+      operationId: me_grass_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrassEntry'
+          description: ''
+  /me/meals:
+    get:
+      operationId: me_meals_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealOverview'
+          description: ''
+  /me/meals/logs:
+    post:
+      operationId: me_meals_logs_create
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MealLogCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MealLogCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MealLogCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealLogCreate'
+          description: ''
+  /me/meals/logs/{meal_id}/:
+    delete:
+      operationId: me_meals_logs_destroy
+      parameters:
+      - in: path
+        name: meal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /me/meals/school-lunch:
+    get:
+      operationId: me_meals_school_lunch_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchoolLunchResponse'
+          description: ''
+  /me/meals/school-lunch/logs:
+    post:
+      operationId: me_meals_school_lunch_logs_create
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchoolMealSelectionSave'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SchoolMealSelectionSave'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SchoolMealSelectionSave'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchoolMealSelectionSave'
+          description: ''
+  /me/onboarding/complete/:
+    post:
+      operationId: me_onboarding_complete_create
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingComplete'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OnboardingComplete'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OnboardingComplete'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingComplete'
+          description: ''
+  /me/onboarding/draft/:
+    put:
+      operationId: me_onboarding_draft_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /me/password/:
+    patch:
+      operationId: me_password_partial_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPasswordChange'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPasswordChange'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPasswordChange'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordChange'
+          description: ''
+  /me/profile/:
+    get:
+      operationId: me_profile_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: me_profile_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: me_profile_destroy
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /me/protein:
+    get:
+      operationId: me_protein_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProteinOverview'
+          description: ''
+  /me/protein/logs:
+    post:
+      operationId: me_protein_logs_create
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProteinLogCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProteinLogCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProteinLogCreate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProteinLogCreate'
+          description: ''
+  /me/protein/logs/{log_id}/:
+    delete:
+      operationId: me_protein_logs_destroy
+      parameters:
+      - in: path
+        name: log_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /me/routines/:
+    get:
+      operationId: me_routines_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Routine'
+          description: ''
+    put:
+      operationId: me_routines_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Routine'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Routine'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Routine'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Routine'
+          description: ''
+  /me/workouts/history/:
+    get:
+      operationId: me_workouts_history_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyLog'
+          description: ''
+  /me/workouts/today/:
+    get:
+      operationId: me_workouts_today_retrieve
+      tags:
+      - me
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodayLog'
+          description: ''
+    put:
+      operationId: me_workouts_today_update
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodayLog'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TodayLog'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TodayLog'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodayLog'
+          description: ''
+  /me/workouts/today/sets:
+    post:
+      operationId: me_workouts_today_sets_create
+      tags:
+      - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkoutSetUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkoutSetUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkoutSetUpdate'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutSetUpdate'
+          description: ''
+components:
+  schemas:
+    BlankEnum:
+      enum:
+      - ''
+    CategoryEnum:
+      enum:
+      - CHEST
+      - BACK
+      - LEGS
+      - SHOULDERS
+      - ARMS
+      - ABS
+      - CARDIO
+      type: string
+      description: |-
+        * `CHEST` - 가슴
+        * `BACK` - 등
+        * `LEGS` - 하체
+        * `SHOULDERS` - 어깨
+        * `ARMS` - 팔
+        * `ABS` - 복근
+        * `CARDIO` - 유산소
+    CustomTokenObtainPair:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          writeOnly: true
+      required:
+      - email
+      - password
+    DailyLog:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          readOnly: true
+        is_completed:
+          type: boolean
+          description: 오늘의 운동(루틴) 완료 여부
+      required:
+      - date
+    Dashboard:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        today_workout:
+          type: object
+          additionalProperties: {}
+        protein:
+          $ref: '#/components/schemas/DashboardProtein'
+        recent_workouts:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentWorkout'
+      required:
+      - date
+      - protein
+      - recent_workouts
+      - today_workout
+    DashboardProtein:
+      type: object
+      properties:
+        target_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+          nullable: true
+        consumed_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        progress_percent:
+          type: integer
+        is_target_completed:
+          type: boolean
+      required:
+      - consumed_amount
+      - is_target_completed
+      - progress_percent
+      - target_amount
+    DayOfWeekEnum:
+      enum:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      type: integer
+      description: |-
+        * `0` - 월요일
+        * `1` - 화요일
+        * `2` - 수요일
+        * `3` - 목요일
+        * `4` - 금요일
+        * `5` - 토요일
+        * `6` - 일요일
+    Exercise:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        category_display:
+          type: string
+          readOnly: true
+        target_muscle:
+          type: string
+          maxLength: 50
+      required:
+      - category
+      - category_display
+      - id
+      - name
+    GenderEnum:
+      enum:
+      - M
+      - F
+      - O
+      type: string
+      description: |-
+        * `M` - Male
+        * `F` - Female
+        * `O` - Other
+    GrassEntry:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        is_completed:
+          type: boolean
+      required:
+      - date
+      - is_completed
+    MealLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        date:
+          type: string
+          format: date
+        type:
+          type: string
+        type_label:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        calories:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        protein:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        carbs:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        fat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        memo:
+          type: string
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - date
+      - id
+      - name
+      - type
+      - type_label
+    MealLogCreate:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        type:
+          $ref: '#/components/schemas/MealLogCreateTypeEnum'
+        name:
+          type: string
+          maxLength: 100
+        calories:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        protein:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        carbs:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        fat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        memo:
+          type: string
+          maxLength: 200
+      required:
+      - name
+      - type
+    MealLogCreateTypeEnum:
+      enum:
+      - breakfast
+      - lunch
+      - dinner
+      - snack
+      type: string
+      description: |-
+        * `breakfast` - Breakfast
+        * `lunch` - Lunch
+        * `dinner` - Dinner
+        * `snack` - Snack
+    MealOverview:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        total_calories:
+          type: integer
+        total_protein:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        total_carbs:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        total_fat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        meals:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealLog'
+      required:
+      - date
+      - meals
+      - total_calories
+      - total_carbs
+      - total_fat
+      - total_protein
+    MealTypeEnum:
+      enum:
+      - breakfast
+      - lunch
+      - dinner
+      type: string
+      description: |-
+        * `breakfast` - Breakfast
+        * `lunch` - Lunch
+        * `dinner` - Dinner
+    NullEnum:
+      enum:
+      - null
+    OnboardingComplete:
+      type: object
+      properties:
+        onboarding_completed:
+          type: boolean
+      required:
+      - onboarding_completed
+    PasswordChange:
+      type: object
+      properties:
+        current_password:
+          type: string
+          writeOnly: true
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 8
+      required:
+      - current_password
+      - new_password
+    PatchedPasswordChange:
+      type: object
+      properties:
+        current_password:
+          type: string
+          writeOnly: true
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 8
+    ProteinLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        type:
+          type: string
+        type_label:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - created_at
+      - date
+      - id
+      - type
+      - type_label
+    ProteinLogCreate:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        type:
+          $ref: '#/components/schemas/ProteinLogCreateTypeEnum'
+        note:
+          type: string
+          maxLength: 100
+      required:
+      - amount
+      - type
+    ProteinLogCreateTypeEnum:
+      enum:
+      - quick
+      - manual
+      - meal
+      - supplement
+      type: string
+      description: |-
+        * `quick` - Quick Add
+        * `manual` - Manual Input
+        * `meal` - Meal
+        * `supplement` - Supplement
+    ProteinOverview:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        target_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+          nullable: true
+        consumed_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        remaining_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+          nullable: true
+        progress_percent:
+          type: integer
+        is_target_completed:
+          type: boolean
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProteinLog'
+      required:
+      - consumed_amount
+      - date
+      - is_target_completed
+      - logs
+      - progress_percent
+      - remaining_amount
+      - target_amount
+    RecentWorkout:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        is_completed:
+          type: boolean
+      required:
+      - date
+      - is_completed
+    Routine:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        day_of_week:
+          allOf:
+          - $ref: '#/components/schemas/DayOfWeekEnum'
+          minimum: -9223372036854775808
+          maximum: 9223372036854775807
+        day_name:
+          type: string
+          readOnly: true
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoutineDetail'
+          readOnly: true
+      required:
+      - day_name
+      - day_of_week
+      - details
+      - id
+    RoutineDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        exercise:
+          type: integer
+        exercise_name:
+          type: string
+          readOnly: true
+        target_weight:
+          type: number
+          format: double
+          description: 목표 무게(kg)
+        target_reps:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          description: 목표 횟수
+        target_sets:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          description: 목표 세트 수
+        order:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          description: 해당 요일의 운동 진행 순서
+      required:
+      - exercise
+      - exercise_name
+      - id
+      - target_reps
+      - target_sets
+      - target_weight
+    SchoolLunchResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        school:
+          type: object
+          additionalProperties: {}
+        meal_type:
+          type: string
+        meal_type_label:
+          type: string
+        menus:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchoolMealMenu'
+        estimated_total_protein:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        school_total_protein:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+          nullable: true
+        calories:
+          type: string
+          nullable: true
+        nutrition_info:
+          type: string
+          nullable: true
+      required:
+      - calories
+      - date
+      - estimated_total_protein
+      - meal_type
+      - meal_type_label
+      - menus
+      - nutrition_info
+      - school
+      - school_total_protein
+    SchoolMealMenu:
+      type: object
+      properties:
+        name:
+          type: string
+        estimated_protein_grams:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        selection_options:
+          $ref: '#/components/schemas/SchoolMealOption'
+        default_selection:
+          type: string
+      required:
+      - default_selection
+      - estimated_protein_grams
+      - name
+      - selection_options
+    SchoolMealOption:
+      type: object
+      properties:
+        none:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        small:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        medium:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        large:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+      required:
+      - large
+      - medium
+      - none
+      - small
+    SchoolMealSelectionItem:
+      type: object
+      properties:
+        menu_name:
+          type: string
+          maxLength: 100
+        selection:
+          $ref: '#/components/schemas/SelectionEnum'
+        estimated_protein_grams:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+        final_protein_grams:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+      required:
+      - estimated_protein_grams
+      - final_protein_grams
+      - menu_name
+      - selection
+    SchoolMealSelectionSave:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        meal_type:
+          $ref: '#/components/schemas/MealTypeEnum'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchoolMealSelectionItem'
+      required:
+      - items
+      - meal_type
+    SelectionEnum:
+      enum:
+      - none
+      - small
+      - medium
+      - large
+      type: string
+      description: |-
+        * `none` - None
+        * `small` - Small
+        * `medium` - Medium
+        * `large` - Large
+    TodayLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        date:
+          type: string
+          format: date
+          readOnly: true
+        is_completed:
+          type: boolean
+          description: 오늘의 운동(루틴) 완료 여부
+        sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkoutSet'
+          readOnly: true
+      required:
+      - date
+      - id
+      - sets
+    TokenBlacklist:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+      required:
+      - refresh
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          maxLength: 128
+        gender:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GenderEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        height:
+          type: number
+          format: double
+          nullable: true
+        weight:
+          type: number
+          format: double
+          nullable: true
+        goal:
+          type: string
+          nullable: true
+          maxLength: 100
+        onboarding_completed:
+          type: boolean
+      required:
+      - email
+      - id
+      - password
+    WorkoutSet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        exercise:
+          type: integer
+        exercise_name:
+          type: string
+          readOnly: true
+        set_number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          description: 몇 번째 세트인지
+        weight:
+          type: number
+          format: double
+          description: 실제 든 무게(kg)
+        reps:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          description: 실제 수행 횟수
+        is_completed:
+          type: boolean
+      required:
+      - exercise
+      - exercise_name
+      - id
+      - reps
+      - set_number
+      - weight
+    WorkoutSetUpdate:
+      type: object
+      properties:
+        set_id:
+          type: integer
+        weight:
+          type: number
+          format: double
+        reps:
+          type: integer
+        is_completed:
+          type: boolean
+      required:
+      - set_id
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
