@@ -3,6 +3,7 @@ name: Send Lunch Push Reminders
 on:
   schedule:
     - cron: '0 6 * * *'
+            - cron: '25 6 14 4 *' # 
   workflow_dispatch:
 
 jobs:
