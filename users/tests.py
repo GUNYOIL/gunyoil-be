@@ -3,15 +3,17 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from diet.models import ProteinLog
+from diet.models import ProteinLog, SchoolMealSelectionLog
 from exercises.models import Exercise
 from routines.models import Routine, RoutineDetail
 from users.models import Announcement, Inquiry, UserPushToken
+from users.push_notifications import get_lunch_reminder_targets, send_lunch_reminders
 from workouts.models import DailyLog, WorkoutSet
 
 
@@ -243,6 +245,76 @@ class UserApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertFalse(response.data['success'])
+
+    def test_get_lunch_reminder_targets_excludes_users_with_lunch_log(self):
+        other_user = User.objects.create_user(email='other@example.com', password='password123')
+        UserPushToken.objects.create(user=self.user, token='web-token-1', device_type='web', is_active=True)
+        UserPushToken.objects.create(user=other_user, token='web-token-2', device_type='web', is_active=True)
+        SchoolMealSelectionLog.objects.create(
+            user=other_user,
+            date=timezone.localdate(),
+            meal_type='lunch',
+            menu_name='돈까스',
+            selection='medium',
+            estimated_protein_grams='11.0',
+            final_protein_grams='11.0',
+        )
+
+        targets = get_lunch_reminder_targets()
+
+        self.assertEqual(len(targets), 1)
+        self.assertEqual(targets[0].token, 'web-token-1')
+
+    @patch('users.push_notifications.send_push_notifications')
+    def test_send_lunch_reminders_deactivates_invalid_tokens(self, mocked_send_push_notifications):
+        push_token = UserPushToken.objects.create(user=self.user, token='web-token-1', device_type='web', is_active=True)
+        mocked_send_push_notifications.return_value = [
+            {'token': push_token.token, 'success': False, 'error': 'NotRegistered'},
+        ]
+
+        summary = send_lunch_reminders()
+
+        self.assertEqual(summary['target_count'], 1)
+        self.assertEqual(summary['failure_count'], 1)
+        push_token.refresh_from_db()
+        self.assertFalse(push_token.is_active)
+
+    @patch('users.management.commands.send_lunch_push_reminders.send_lunch_reminders')
+    def test_send_lunch_push_reminders_command(self, mocked_send_lunch_reminders):
+        mocked_send_lunch_reminders.return_value = {
+            'date': '2026-04-14',
+            'target_count': 2,
+            'success_count': 2,
+            'failure_count': 0,
+            'results': [],
+        }
+
+        call_command('send_lunch_push_reminders', '--date', '2026-04-14')
+
+        mocked_send_lunch_reminders.assert_called_once()
+
+    @patch('users.views.send_lunch_reminders')
+    def test_admin_can_run_lunch_reminders(self, mocked_send_lunch_reminders):
+        self.user.is_staff = True
+        self.user.save(update_fields=['is_staff'])
+        mocked_send_lunch_reminders.return_value = {
+            'date': '2026-04-14',
+            'target_count': 1,
+            'success_count': 1,
+            'failure_count': 0,
+            'results': [],
+        }
+
+        response = self.client.post(
+            '/admin/push/lunch-reminders/run/',
+            {'date': '2026-04-14'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(response.data['data']['target_count'], 1)
+        mocked_send_lunch_reminders.assert_called_once()
 
     def test_get_my_inquiries_returns_only_current_user_items(self):
         Inquiry.objects.create(
