@@ -19,7 +19,11 @@ from .views import (
     InquiryView,
     AdminInquiryView,
     AdminInquiryDetailView,
+    AdminInquiryDetailView,
     AdminLunchReminderRunView,
+    AdminBreakfastReminderRunView,
+    AdminDinnerReminderRunView,
+    AdminExerciseReminderRunView,
 )
 
 
@@ -55,4 +59,10 @@ urlpatterns = [
     path('admin/inquiries/<int:pk>/', AdminInquiryDetailView.as_view(), name='admin_inquiries_detail'),
     path('admin/push/lunch-reminders/run', AdminLunchReminderRunView.as_view(), name='admin_lunch_reminder_run_no_slash'),
     path('admin/push/lunch-reminders/run/', AdminLunchReminderRunView.as_view(), name='admin_lunch_reminder_run'),
+    path('admin/push/breakfast-reminders/run', AdminBreakfastReminderRunView.as_view(), name='admin_breakfast_reminder_run_no_slash'),
+    path('admin/push/breakfast-reminders/run/', AdminBreakfastReminderRunView.as_view(), name='admin_breakfast_reminder_run'),
+    path('admin/push/dinner-reminders/run', AdminDinnerReminderRunView.as_view(), name='admin_dinner_reminder_run_no_slash'),
+    path('admin/push/dinner-reminders/run/', AdminDinnerReminderRunView.as_view(), name='admin_dinner_reminder_run'),
+    path('admin/push/exercise-reminders/run', AdminExerciseReminderRunView.as_view(), name='admin_exercise_reminder_run_no_slash'),
+    path('admin/push/exercise-reminders/run/', AdminExerciseReminderRunView.as_view(), name='admin_exercise_reminder_run'),
 ]
