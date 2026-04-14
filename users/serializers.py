@@ -88,3 +88,16 @@ class TestPushNotificationSerializer(serializers.Serializer):
 
 class RunLunchReminderSerializer(serializers.Serializer):
     date = serializers.DateField(required=False)
+
+
+class RunBreakfastReminderSerializer(serializers.Serializer):
+    date = serializers.DateField(required=False)
+
+
+class RunDinnerReminderSerializer(serializers.Serializer):
+    date = serializers.DateField(required=False)
+
+
+class RunExerciseReminderSerializer(serializers.Serializer):
+    date = serializers.DateField(required=False)
+
