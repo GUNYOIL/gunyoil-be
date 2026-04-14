@@ -74,6 +74,17 @@ def send_push_notifications(tokens, title, body, data=None):
     return results
 
 
+def _deduplicate_tokens_by_user(active_tokens):
+    """Keep only the most recently updated token for each user."""
+    seen_user_ids = set()
+    deduplicated = []
+    for pt in active_tokens:
+        if pt.user_id not in seen_user_ids:
+            deduplicated.append(pt)
+            seen_user_ids.add(pt.user_id)
+    return deduplicated
+
+
 def get_lunch_reminder_targets(target_date=None):
     from diet.models import SchoolMealSelectionLog
     from users.models import UserPushToken
@@ -86,8 +97,10 @@ def get_lunch_reminder_targets(target_date=None):
     )
 
     active_tokens = UserPushToken.objects.filter(is_active=True).select_related('user').order_by('-updated_at', '-id')
+    deduplicated_tokens = _deduplicate_tokens_by_user(active_tokens)
+
     targets = []
-    for push_token in active_tokens:
+    for push_token in deduplicated_tokens:
         if push_token.user_id in lunch_logged_user_ids:
             continue
         targets.append(push_token)
@@ -137,7 +150,8 @@ def _get_meal_reminder_targets(meal_type, target_date=None):
     )
 
     active_tokens = UserPushToken.objects.filter(is_active=True).select_related('user').order_by('-updated_at', '-id')
-    return [pt for pt in active_tokens if pt.user_id not in logged_user_ids]
+    deduplicated_tokens = _deduplicate_tokens_by_user(active_tokens)
+    return [pt for pt in deduplicated_tokens if pt.user_id not in logged_user_ids]
 
 
 def _send_meal_reminders(meal_type, title_env, default_title, push_type, target_date=None):
@@ -211,8 +225,10 @@ def get_exercise_reminder_targets(target_date=None):
     )
 
     active_tokens = UserPushToken.objects.filter(is_active=True).select_related('user').order_by('-updated_at', '-id')
+    deduplicated_tokens = _deduplicate_tokens_by_user(active_tokens)
+
     targets = []
-    for pt in active_tokens:
+    for pt in deduplicated_tokens:
         if pt.user_id not in users_with_routine_today:
             continue  # rest day for this user → skip
         if pt.user_id in completed_user_ids:
