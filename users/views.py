@@ -4,7 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -16,6 +16,7 @@ from workouts.models import DailyLog
 from workouts.serializers import DailyLogSerializer, TodayLogSerializer
 
 from .push_notifications import send_push_notification
+from .push_notifications import send_lunch_reminders
 from .serializers import (
     CustomTokenObtainPairSerializer,
     DashboardSerializer,
@@ -23,6 +24,7 @@ from .serializers import (
     OnboardingCompleteSerializer,
     PasswordChangeSerializer,
     PushTokenSerializer,
+    RunLunchReminderSerializer,
     TestPushNotificationSerializer,
     UserSerializer,
 )
@@ -325,6 +327,31 @@ class PushNotificationTestView(APIView):
             },
             '?몄떆 ?뚯넚 ?뚯뒪?몄뿉 ?깃났?덉뒿?덈떎.',
         )
+
+
+class AdminLunchReminderRunView(APIView):
+    permission_classes = [IsAdminUser]
+    serializer_class = RunLunchReminderSerializer
+
+    @extend_schema(
+        summary='점심 푸시 알림 수동 실행',
+        request=RunLunchReminderSerializer,
+        responses={200: inline_serializer(
+            name='AdminLunchReminderRunResponse',
+            fields={
+                'date': serializers.DateField(),
+                'target_count': serializers.IntegerField(),
+                'success_count': serializers.IntegerField(),
+                'failure_count': serializers.IntegerField(),
+            },
+        )},
+    )
+    def post(self, request):
+        serializer = RunLunchReminderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        summary = send_lunch_reminders(target_date=serializer.validated_data.get('date'))
+        return success_response(summary, '점심 푸시 알림 실행이 완료되었습니다.')
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):

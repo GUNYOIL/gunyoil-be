@@ -19,6 +19,7 @@ from .views import (
     InquiryView,
     AdminInquiryView,
     AdminInquiryDetailView,
+    AdminLunchReminderRunView,
 )
 
 
@@ -52,4 +53,6 @@ urlpatterns = [
     path('admin/inquiries/', AdminInquiryView.as_view(), name='admin_inquiries'),
     path('admin/inquiries/<int:pk>', AdminInquiryDetailView.as_view(), name='admin_inquiries_detail_no_slash'),
     path('admin/inquiries/<int:pk>/', AdminInquiryDetailView.as_view(), name='admin_inquiries_detail'),
+    path('admin/push/lunch-reminders/run', AdminLunchReminderRunView.as_view(), name='admin_lunch_reminder_run_no_slash'),
+    path('admin/push/lunch-reminders/run/', AdminLunchReminderRunView.as_view(), name='admin_lunch_reminder_run'),
 ]
