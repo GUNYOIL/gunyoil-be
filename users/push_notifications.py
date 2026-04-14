@@ -122,3 +122,129 @@ def send_lunch_reminders(target_date=None):
         'failure_count': sum(1 for result in results if not result['success']),
         'results': results,
     }
+
+
+def _get_meal_reminder_targets(meal_type, target_date=None):
+    """Return active push token objects for users who have NOT yet logged the given meal_type today."""
+    from diet.models import SchoolMealSelectionLog
+    from users.models import UserPushToken
+
+    if target_date is None:
+        target_date = timezone.localdate()
+
+    logged_user_ids = set(
+        SchoolMealSelectionLog.objects.filter(date=target_date, meal_type=meal_type).values_list('user_id', flat=True)
+    )
+
+    active_tokens = UserPushToken.objects.filter(is_active=True).select_related('user').order_by('-updated_at', '-id')
+    return [pt for pt in active_tokens if pt.user_id not in logged_user_ids]
+
+
+def _send_meal_reminders(meal_type, title_env, default_title, push_type, target_date=None):
+    if target_date is None:
+        target_date = timezone.localdate()
+
+    title = os.getenv(title_env, default_title)
+    body = os.getenv(f'{title_env}_BODY', title)
+    targets = _get_meal_reminder_targets(meal_type, target_date=target_date)
+    results = send_push_notifications(
+        [pt.token for pt in targets],
+        title=title,
+        body=body,
+        data={'type': push_type, 'date': target_date.isoformat()},
+    )
+
+    invalid_errors = {'Device unregistered.', 'NotRegistered'}
+    invalid_tokens = [r['token'] for r in results if not r['success'] and r.get('error') in invalid_errors]
+    if invalid_tokens:
+        from users.models import UserPushToken
+        UserPushToken.objects.filter(token__in=invalid_tokens).update(is_active=False)
+
+    return {
+        'date': target_date.isoformat(),
+        'target_count': len(targets),
+        'success_count': sum(1 for r in results if r['success']),
+        'failure_count': sum(1 for r in results if not r['success']),
+        'results': results,
+    }
+
+
+def send_breakfast_reminders(target_date=None):
+    return _send_meal_reminders(
+        meal_type='breakfast',
+        title_env='PUSH_BREAKFAST_TITLE',
+        default_title='아침 급식을 기록해보세요!',
+        push_type='breakfast-reminder',
+        target_date=target_date,
+    )
+
+
+def send_dinner_reminders(target_date=None):
+    return _send_meal_reminders(
+        meal_type='dinner',
+        title_env='PUSH_DINNER_TITLE',
+        default_title='저녁 급식을 기록해보세요!',
+        push_type='dinner-reminder',
+        target_date=target_date,
+    )
+
+
+def get_exercise_reminder_targets(target_date=None):
+    """Return active push tokens for users who have a routine scheduled today (non-rest day) and haven't completed their workout."""
+    from routines.models import Routine
+    from users.models import UserPushToken
+    from workouts.models import DailyLog
+
+    if target_date is None:
+        target_date = timezone.localdate()
+
+    weekday = target_date.weekday()  # 0=Monday … 6=Sunday
+
+    # Users who have a routine with at least one exercise detail for today's weekday
+    users_with_routine_today = set(
+        Routine.objects.filter(day_of_week=weekday).filter(details__isnull=False).values_list('user_id', flat=True).distinct()
+    )
+
+    # Users who already completed their workout today
+    completed_user_ids = set(
+        DailyLog.objects.filter(date=target_date, is_completed=True).values_list('user_id', flat=True)
+    )
+
+    active_tokens = UserPushToken.objects.filter(is_active=True).select_related('user').order_by('-updated_at', '-id')
+    targets = []
+    for pt in active_tokens:
+        if pt.user_id not in users_with_routine_today:
+            continue  # rest day for this user → skip
+        if pt.user_id in completed_user_ids:
+            continue  # already done
+        targets.append(pt)
+    return targets
+
+
+def send_exercise_reminders(target_date=None):
+    if target_date is None:
+        target_date = timezone.localdate()
+
+    title = os.getenv('PUSH_EXERCISE_TITLE', '오늘 운동 기록을 남겨보세요!')
+    body = os.getenv('PUSH_EXERCISE_BODY', title)
+    targets = get_exercise_reminder_targets(target_date=target_date)
+    results = send_push_notifications(
+        [pt.token for pt in targets],
+        title=title,
+        body=body,
+        data={'type': 'exercise-reminder', 'date': target_date.isoformat()},
+    )
+
+    invalid_errors = {'Device unregistered.', 'NotRegistered'}
+    invalid_tokens = [r['token'] for r in results if not r['success'] and r.get('error') in invalid_errors]
+    if invalid_tokens:
+        from users.models import UserPushToken
+        UserPushToken.objects.filter(token__in=invalid_tokens).update(is_active=False)
+
+    return {
+        'date': target_date.isoformat(),
+        'target_count': len(targets),
+        'success_count': sum(1 for r in results if r['success']),
+        'failure_count': sum(1 for r in results if not r['success']),
+        'results': results,
+    }
