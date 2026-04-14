@@ -1,0 +1,33 @@
+name: Send Lunch Push Reminders
+
+on:
+  schedule:
+    - cron: '50 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  send-lunch-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login as admin
+        id: login
+        env:
+          API_BASE_URL: ${{ secrets.GUNYOIL_API_BASE_URL }}
+          ADMIN_USERNAME: ${{ secrets.GUNYOIL_ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.GUNYOIL_ADMIN_PASSWORD }}
+        run: |
+          RESPONSE=$(curl -sS -X POST "${API_BASE_URL}/auth/admin/login/" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"${ADMIN_USERNAME}\",\"password\":\"${ADMIN_PASSWORD}\"}")
+          ACCESS_TOKEN=$(python -c "import json,sys; print(json.load(sys.stdin)['data']['access'])" <<< "$RESPONSE")
+          echo "access_token=$ACCESS_TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Run lunch reminder job
+        env:
+          API_BASE_URL: ${{ secrets.GUNYOIL_API_BASE_URL }}
+          ACCESS_TOKEN: ${{ steps.login.outputs.access_token }}
+        run: |
+          curl -sS -X POST "${API_BASE_URL}/admin/push/lunch-reminders/run/" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{}"
