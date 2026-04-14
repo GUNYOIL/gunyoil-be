@@ -174,6 +174,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3001',
     'https://gunyoil.vercel.app',
     'https://gunyoil-admin.vercel.app',
+    'https://gunyoil-5juhp32p1-ssounsowns-5626s-projects.vercel.app',
 ]
 
 NEIS_API_KEY = os.getenv('NEIS_API_KEY')
