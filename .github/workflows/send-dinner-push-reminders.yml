@@ -2,7 +2,7 @@ name: Send Dinner Push Reminders
 
 on:
   schedule:
-    - cron: '0 9 * * *'
+    - cron: '05 9 * * *'
   workflow_dispatch:
 
 jobs:
