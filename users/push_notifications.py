@@ -64,13 +64,29 @@ def send_push_notification(token, title, body, data=None):
 
 
 def send_push_notifications(tokens, title, body, data=None):
+    if not tokens:
+        return []
+
+    messaging = _load_firebase_admin()
     results = []
-    for token in tokens:
-        try:
-            message_id = send_push_notification(token=token, title=title, body=body, data=data)
-            results.append({'token': token, 'success': True, 'message_id': message_id})
-        except Exception as exc:
-            results.append({'token': token, 'success': False, 'error': str(exc)})
+
+    # Process in batches of 500 (Firebase MulticastMessage limit)
+    for i in range(0, len(tokens), 500):
+        batch_tokens = tokens[i : i + 500]
+        message = messaging.MulticastMessage(
+            tokens=batch_tokens,
+            notification=messaging.Notification(title=title, body=body),
+            data=data or {},
+        )
+        batch_response = messaging.send_each_for_multicast(message)
+
+        for idx, resp in enumerate(batch_response.responses):
+            token = batch_tokens[idx]
+            if resp.success:
+                results.append({'token': token, 'success': True, 'message_id': resp.message_id})
+            else:
+                results.append({'token': token, 'success': False, 'error': str(resp.exception)})
+
     return results
 
 
