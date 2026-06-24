@@ -19,7 +19,7 @@ from django.urls import path, include, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from django.http import HttpResponse
 from django.conf import settings
-import os
+import os 
 
 def admin_frontend_view(request, path=""):
     frontend_dir = os.path.join(settings.BASE_DIR, 'admin_frontend')
