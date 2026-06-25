@@ -4,7 +4,7 @@ from rest_framework.views import exception_handler
 
 
 def success_response(data=None, message='OK', status_code=status.HTTP_200_OK):
-    return Response(
+    return Response( 
         {
             'success': True,
             'message': message,
