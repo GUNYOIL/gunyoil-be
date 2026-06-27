@@ -559,7 +559,7 @@ class AnnouncementListView(APIView):
 
 
 class AdminAnnouncementView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     @extend_schema(
         summary='공지사항 등록 (관리자)',
@@ -594,7 +594,7 @@ class AdminAnnouncementView(APIView):
 
 
 class AdminAnnouncementDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     @extend_schema(
         summary='공지 선택 또는 삭제 (관리자)',
@@ -699,7 +699,7 @@ class InquiryView(APIView):
 
 
 class AdminInquiryView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     @extend_schema(
         summary='전체 문의 목록 조회 (관리자)',
@@ -735,7 +735,7 @@ class AdminInquiryView(APIView):
 
 
 class AdminInquiryDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     @extend_schema(
         summary='문의 상태 변경 (관리자)',
