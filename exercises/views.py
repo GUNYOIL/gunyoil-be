@@ -1,4 +1,4 @@
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema, inline_serializer
@@ -31,7 +31,7 @@ class ExerciseListView(APIView):
         return success_response(serializer.data)
 
 class AdminExerciseView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
 
     @extend_schema(
         summary="운동 기구 추가 (어드민)",
