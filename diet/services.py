@@ -241,8 +241,11 @@ def fetch_school_lunch(meal_date, meal_type='lunch'):
         }
     )
 
-    with urlopen(f'{NEIS_MEAL_API_URL}?{query}', timeout=10) as response:
-        payload = json.loads(response.read().decode('utf-8'))
+    try:
+        with urlopen(f'{NEIS_MEAL_API_URL}?{query}', timeout=10) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+    except Exception as exc:
+        raise ValueError(f"NEIS API connection failed: {exc}") from exc
 
     if 'RESULT' in payload:
         code = payload['RESULT'].get('CODE')
