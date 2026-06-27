@@ -1,18 +1,20 @@
 import base64
+import datetime
 import json
 import os
+from typing import Any, Dict, List, Optional
 
 from django.utils import timezone
 
 
-def _decode_base64(encoded_value):
+def _decode_base64(encoded_value: str) -> str:
     try:
         return base64.b64decode(encoded_value).decode('utf-8')
     except Exception:
         return base64.urlsafe_b64decode(encoded_value).decode('utf-8')
 
 
-def _load_service_account_json():
+def _load_service_account_json() -> str:
     service_account_json = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON')
     service_account_json_base64 = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON_BASE64')
     if service_account_json_base64:
@@ -41,7 +43,7 @@ def _load_service_account_json():
     )
 
 
-def _load_firebase_admin():
+def _load_firebase_admin() -> Any:
     import firebase_admin
     from firebase_admin import credentials, messaging
 
@@ -53,7 +55,7 @@ def _load_firebase_admin():
     return messaging
 
 
-def send_push_notification(token, title, body, data=None):
+def send_push_notification(token: str, title: str, body: str, data: Optional[Dict[str, Any]] = None) -> str:
     messaging = _load_firebase_admin()
     message = messaging.Message(
         token=token,
@@ -63,7 +65,9 @@ def send_push_notification(token, title, body, data=None):
     return messaging.send(message)
 
 
-def send_push_notifications(tokens, title, body, data=None):
+def send_push_notifications(
+    tokens: List[str], title: str, body: str, data: Optional[Dict[str, Any]] = None
+) -> List[Dict[str, Any]]:
     if not tokens:
         return []
 
@@ -90,7 +94,7 @@ def send_push_notifications(tokens, title, body, data=None):
     return results
 
 
-def _deduplicate_tokens_by_user(active_tokens):
+def _deduplicate_tokens_by_user(active_tokens: Any) -> List[Any]:
     """Keep only the most recently updated token for each user."""
     seen_user_ids = set()
     deduplicated = []
@@ -101,11 +105,11 @@ def _deduplicate_tokens_by_user(active_tokens):
     return deduplicated
 
 
-def get_lunch_reminder_targets(target_date=None):
+def get_lunch_reminder_targets(target_date: Optional[datetime.date] = None) -> List[Any]:
     return _get_meal_reminder_targets('lunch', target_date=target_date)
 
 
-def send_lunch_reminders(target_date=None):
+def send_lunch_reminders(target_date: Optional[datetime.date] = None) -> Dict[str, Any]:
     return _send_meal_reminders(
         meal_type='lunch',
         title_env='PUSH_LUNCH_TITLE',
@@ -115,7 +119,7 @@ def send_lunch_reminders(target_date=None):
     )
 
 
-def _get_meal_reminder_targets(meal_type, target_date=None):
+def _get_meal_reminder_targets(meal_type: str, target_date: Optional[datetime.date] = None) -> List[Any]:
     """Return active push token objects for users who have NOT yet logged the given meal_type today."""
     from diet.models import SchoolMealSelectionLog
     from users.models import UserPushToken
@@ -132,7 +136,9 @@ def _get_meal_reminder_targets(meal_type, target_date=None):
     return [pt for pt in deduplicated_tokens if pt.user_id not in logged_user_ids]
 
 
-def _send_meal_reminders(meal_type, title_env, default_title, push_type, target_date=None):
+def _send_meal_reminders(
+    meal_type: str, title_env: str, default_title: str, push_type: str, target_date: Optional[datetime.date] = None
+) -> Dict[str, Any]:
     if target_date is None:
         target_date = timezone.localdate()
 
@@ -161,7 +167,7 @@ def _send_meal_reminders(meal_type, title_env, default_title, push_type, target_
     }
 
 
-def send_breakfast_reminders(target_date=None):
+def send_breakfast_reminders(target_date: Optional[datetime.date] = None) -> Dict[str, Any]:
     return _send_meal_reminders(
         meal_type='breakfast',
         title_env='PUSH_BREAKFAST_TITLE',
@@ -171,7 +177,7 @@ def send_breakfast_reminders(target_date=None):
     )
 
 
-def send_dinner_reminders(target_date=None):
+def send_dinner_reminders(target_date: Optional[datetime.date] = None) -> Dict[str, Any]:
     return _send_meal_reminders(
         meal_type='dinner',
         title_env='PUSH_DINNER_TITLE',
@@ -181,7 +187,7 @@ def send_dinner_reminders(target_date=None):
     )
 
 
-def get_exercise_reminder_targets(target_date=None):
+def get_exercise_reminder_targets(target_date: Optional[datetime.date] = None) -> List[Any]:
     """Return active push tokens for users who have a routine scheduled today (non-rest day) and haven't completed their workout."""
     from routines.models import Routine
     from users.models import UserPushToken
@@ -215,7 +221,7 @@ def get_exercise_reminder_targets(target_date=None):
     return targets
 
 
-def send_exercise_reminders(target_date=None):
+def send_exercise_reminders(target_date: Optional[datetime.date] = None) -> Dict[str, Any]:
     if target_date is None:
         target_date = timezone.localdate()
 
