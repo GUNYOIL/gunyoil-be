@@ -174,6 +174,9 @@ class UserApiTests(APITestCase):
             reply_email='user@example.com',
         )
 
+        self.user.is_staff = True
+        self.user.save(update_fields=['is_staff'])
+
         response = self.client.patch(
             f'/admin/inquiries/{inquiry.id}',
             {'status': 'RESOLVED'},
@@ -370,6 +373,9 @@ class UserApiTests(APITestCase):
         self.assertTrue(response.data['data'][0]['is_selected_for_users'])
 
     def test_patch_admin_announcement_selects_only_one(self):
+        self.user.is_staff = True
+        self.user.save(update_fields=['is_staff'])
+
         first = Announcement.objects.create(title='첫 공지', content='first', is_selected_for_users=True)
         second = Announcement.objects.create(title='둘째 공지', content='second')
 

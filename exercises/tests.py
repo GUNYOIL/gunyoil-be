@@ -31,3 +31,33 @@ class ExerciseApiTests(APITestCase):
         self.assertTrue(response.data['success'])
         self.assertEqual(len(response.data['data']), 1)
         self.assertEqual(response.data['data'][0]['name'], 'Bench Press')
+
+    def test_admin_create_exercise_by_non_staff_fails(self):
+        response = self.client.post(
+            reverse('admin_exercises'),
+            {
+                'code': 'EX001',
+                'name': 'Incline Bench Press',
+                'category': 'chest',
+                'target_muscle': 'upper chest',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_create_exercise_by_staff_succeeds(self):
+        self.user.is_staff = True
+        self.user.save()
+        response = self.client.post(
+            reverse('admin_exercises'),
+            {
+                'code': 'EX001',
+                'name': 'Incline Bench Press',
+                'category': 'chest',
+                'target_muscle': 'upper chest',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertTrue(Exercise.objects.filter(code='EX001').exists())
