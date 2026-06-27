@@ -1,5 +1,5 @@
 import datetime
-
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
@@ -18,7 +18,7 @@ class WorkoutApiTests(APITestCase):
         self.user = User.objects.create_user(email='workout@example.com', password='password123')
         self.client.force_authenticate(self.user)
         self.exercise = Exercise.objects.create(name='Squat', category='LEGS', target_muscle='quads')
-        routine = Routine.objects.create(user=self.user, day_of_week=datetime.date.today().weekday())
+        routine = Routine.objects.create(user=self.user, day_of_week=timezone.localdate().weekday())
         RoutineDetail.objects.create(
             routine=routine,
             exercise=self.exercise,
