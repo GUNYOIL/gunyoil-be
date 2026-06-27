@@ -102,55 +102,17 @@ def _deduplicate_tokens_by_user(active_tokens):
 
 
 def get_lunch_reminder_targets(target_date=None):
-    from diet.models import SchoolMealSelectionLog
-    from users.models import UserPushToken
-
-    if target_date is None:
-        target_date = timezone.localdate()
-
-    lunch_logged_user_ids = set(
-        SchoolMealSelectionLog.objects.filter(date=target_date, meal_type='lunch').values_list('user_id', flat=True)
-    )
-
-    active_tokens = UserPushToken.objects.filter(is_active=True).select_related('user').order_by('-updated_at', '-id')
-    deduplicated_tokens = _deduplicate_tokens_by_user(active_tokens)
-
-    targets = []
-    for push_token in deduplicated_tokens:
-        if push_token.user_id in lunch_logged_user_ids:
-            continue
-        targets.append(push_token)
-    return targets
+    return _get_meal_reminder_targets('lunch', target_date=target_date)
 
 
 def send_lunch_reminders(target_date=None):
-    if target_date is None:
-        target_date = timezone.localdate()
-
-    title = os.getenv('PUSH_LUNCH_TITLE', '점심 급식을 기록해보세요!')
-    body = os.getenv('PUSH_LUNCH_BODY', title)
-    targets = get_lunch_reminder_targets(target_date=target_date)
-    results = send_push_notifications(
-        [target.token for target in targets],
-        title=title,
-        body=body,
-        data={'type': 'lunch-reminder', 'date': target_date.isoformat()},
+    return _send_meal_reminders(
+        meal_type='lunch',
+        title_env='PUSH_LUNCH_TITLE',
+        default_title='점심 급식을 기록해보세요!',
+        push_type='lunch-reminder',
+        target_date=target_date,
     )
-
-    invalid_errors = {'Device unregistered.', 'NotRegistered'}
-    invalid_tokens = [result['token'] for result in results if not result['success'] and result.get('error') in invalid_errors]
-    if invalid_tokens:
-        from users.models import UserPushToken
-
-        UserPushToken.objects.filter(token__in=invalid_tokens).update(is_active=False)
-
-    return {
-        'date': target_date.isoformat(),
-        'target_count': len(targets),
-        'success_count': sum(1 for result in results if result['success']),
-        'failure_count': sum(1 for result in results if not result['success']),
-        'results': results,
-    }
 
 
 def _get_meal_reminder_targets(meal_type, target_date=None):
