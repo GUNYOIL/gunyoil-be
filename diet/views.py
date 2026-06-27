@@ -1,6 +1,7 @@
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -215,42 +216,43 @@ class SchoolLunchSelectionSaveView(APIView):
         meal_type = serializer.validated_data['meal_type']
         items = serializer.validated_data['items']
 
-        SchoolMealSelectionLog.objects.filter(
-            user=request.user,
-            date=target_date,
-            meal_type=meal_type,
-        ).delete()
-
-        selection_logs = []
-        total_protein = Decimal('0.0')
-
-        for item in items:
-            selection_log = SchoolMealSelectionLog.objects.create(
+        with transaction.atomic():
+            SchoolMealSelectionLog.objects.filter(
                 user=request.user,
                 date=target_date,
                 meal_type=meal_type,
-                menu_name=item['menu_name'],
-                selection=item['selection'],
-                estimated_protein_grams=item['estimated_protein_grams'],
-                final_protein_grams=item['final_protein_grams'],
+            ).delete()
+
+            selection_logs = []
+            total_protein = Decimal('0.0')
+
+            for item in items:
+                selection_log = SchoolMealSelectionLog.objects.create(
+                    user=request.user,
+                    date=target_date,
+                    meal_type=meal_type,
+                    menu_name=item['menu_name'],
+                    selection=item['selection'],
+                    estimated_protein_grams=item['estimated_protein_grams'],
+                    final_protein_grams=item['final_protein_grams'],
+                )
+                selection_logs.append(selection_log)
+                total_protein += item['final_protein_grams']
+
+            ProteinLog.objects.filter(
+                user=request.user,
+                date=target_date,
+                log_type=ProteinLog.LogType.MEAL,
+                note=f'school-lunch:{meal_type}',
+            ).delete()
+
+            protein_log = ProteinLog.objects.create(
+                user=request.user,
+                date=target_date,
+                amount=_quantize(total_protein),
+                log_type=ProteinLog.LogType.MEAL,
+                note=f'school-lunch:{meal_type}',
             )
-            selection_logs.append(selection_log)
-            total_protein += item['final_protein_grams']
-
-        ProteinLog.objects.filter(
-            user=request.user,
-            date=target_date,
-            log_type=ProteinLog.LogType.MEAL,
-            note=f'school-lunch:{meal_type}',
-        ).delete()
-
-        protein_log = ProteinLog.objects.create(
-            user=request.user,
-            date=target_date,
-            amount=_quantize(total_protein),
-            log_type=ProteinLog.LogType.MEAL,
-            note=f'school-lunch:{meal_type}',
-        )
 
         return success_response(
             {
