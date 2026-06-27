@@ -1,4 +1,5 @@
 import datetime
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -52,7 +53,7 @@ class TodayWorkoutView(APIView):
     serializer_class = TodayLogSerializer
 
     def get(self, request):
-        today = datetime.date.today()
+        today = timezone.localdate()
         weekday = today.weekday()
 
         log, created = DailyLog.objects.get_or_create(
@@ -67,7 +68,7 @@ class TodayWorkoutView(APIView):
         return success_response(TodayLogSerializer(log).data)
 
     def put(self, request):
-        today = datetime.date.today()
+        today = timezone.localdate()
         log = DailyLog.objects.filter(user=request.user, date=today).first()
 
         if not log:
@@ -113,7 +114,7 @@ class TodayWorkoutSetCreateView(APIView):
             workout_set = WorkoutSet.objects.get(
                 id=serializer.validated_data['set_id'],
                 daily_log__user=request.user,
-                daily_log__date=datetime.date.today(),
+                daily_log__date=timezone.localdate(),
             )
         except WorkoutSet.DoesNotExist:
             return error_response('Workout set not found for today.', code='workout_set_not_found', status_code=status.HTTP_404_NOT_FOUND)
